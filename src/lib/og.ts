@@ -29,7 +29,10 @@ function loadAssets() {
   assets ??= Promise.all([
     font(400),
     font(600),
-    sharp(resolve("src/assets/akcstudio-logo.png")).resize(144, 144).png().toBuffer(),
+    sharp(resolve("src/assets/akcstudio-logo.png"))
+      .resize(144, 144)
+      .png()
+      .toBuffer(),
   ]).then(([regular, bold, avatar]) => ({
     regular,
     bold,

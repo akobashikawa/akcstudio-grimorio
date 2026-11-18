@@ -41,6 +41,7 @@ Open <http://localhost:4321>.
 | `pnpm dev`            | Start the dev server                     |
 | `pnpm build`          | Type-check, then build to `dist/client/` |
 | `pnpm deploy`         | Build and deploy to Cloudflare Workers   |
+| `pnpm smoke`          | Smoke-test the build or a deployed URL   |
 | `pnpm preview`        | Serve the production build locally       |
 | `pnpm check`          | Type-check Astro, Vue, and TypeScript    |
 | `pnpm test`           | Build and run the browser tests          |
@@ -123,7 +124,7 @@ Set `SITE_URL` to your production origin before building so canonical URLs, feed
 
    This type-checks, builds, and runs `wrangler deploy`. The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
 
-2. Set `SITE_URL=https://yourdomain.com` as a build-time variable (Workers Builds → **Settings → Variables and secrets**, or your local `.env`), add your custom domain, and redeploy.
+2. Set `SITE_URL=https://yourdomain.com` in your local `.env` (or as the `SITE_URL` repository variable for CI), add your custom domain, and redeploy.
 
 To run the built site against the Cloudflare runtime locally:
 
@@ -132,16 +133,36 @@ pnpm build
 pnpm exec wrangler dev
 ```
 
-### Workers Builds (CI/CD)
+### Continuous deployment
 
-Connect the repository in the Cloudflare dashboard and configure:
+The repo includes `.github/workflows/deploy.yml`: every push to `main` (or a manual run) builds, deploys with Wrangler, and smoke-tests the production URL. Add these repository secrets under **Settings → Secrets and variables → Actions**:
+
+| Secret                  | Value                                               |
+| ----------------------- | --------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | API token with **Workers Scripts: Edit** permission |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID                          |
+
+Optionally set the `SITE_URL` repository variable to override the default production origin.
+
+If you prefer Workers Builds, connect the repository in the Cloudflare dashboard instead and disable `.github/workflows/deploy.yml` so pushes are not deployed twice:
 
 | Field          | Value                       |
 | -------------- | --------------------------- |
 | Build command  | `pnpm build`                |
 | Deploy command | `pnpm exec wrangler deploy` |
 
-Cloudflare reads the Node version from `.node-version` and pnpm from `package.json`. Every push to `main` ships a new version.
+Both options read the Node version from `.node-version` and pnpm from `package.json`.
+
+### Smoke tests
+
+`pnpm smoke` starts `wrangler dev` with the built output and checks the main pages, feeds, sitemap, and OG images. Pass a URL to test a deployment instead:
+
+```sh
+pnpm build && pnpm smoke
+pnpm smoke https://akcstudio-grimorio.akobashikawa.workers.dev
+```
+
+The quality-check workflow runs the local variant on every push and pull request, and the deploy workflow runs it against production after each deploy.
 
 ### Other hosts
 

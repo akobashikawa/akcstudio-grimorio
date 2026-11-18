@@ -24,6 +24,8 @@ jobs:
       - run: pnpm build
         env:
           SITE_URL: https://akcstudio-grimorio.akobashikawa.workers.dev
+      - name: Smoke test the built Worker
+        run: pnpm smoke
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v7.0.2

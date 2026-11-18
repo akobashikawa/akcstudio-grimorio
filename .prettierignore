@@ -1,8 +1,10 @@
 node_modules/
 dist/
 .astro/
+.wrangler/
 .git/
 .playwright-mcp/
 test-results/
 playwright-report/
 pnpm-lock.yaml
+worker-configuration.d.ts

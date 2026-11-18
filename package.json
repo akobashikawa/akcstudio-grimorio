@@ -22,6 +22,7 @@
     "dev": "astro dev",
     "build": "pnpm check && astro build",
     "deploy": "pnpm build && wrangler deploy",
+    "smoke": "node scripts/smoke-test.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro sync && astro check && vue-tsc --noEmit",
