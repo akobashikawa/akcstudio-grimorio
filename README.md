@@ -166,7 +166,7 @@ Both options read the Node version from `.node-version` and pnpm from `package.j
 
 ### Smoke tests
 
-`pnpm smoke` starts `wrangler dev` with the built output and checks the main pages, feeds, sitemap, and OG images. Pass a URL to test a deployment instead:
+`pnpm smoke` starts `wrangler dev` with the built output and checks the main pages, feeds, sitemap, OG images, and the bilingual 404 pages. Pass a URL to test a deployment instead:
 
 ```sh
 pnpm build && pnpm smoke
@@ -174,6 +174,10 @@ pnpm smoke https://akcstudio-grimorio.akobashikawa.workers.dev
 ```
 
 The quality-check workflow runs the local variant on every push and pull request, and the deploy workflow runs it against production after each deploy.
+
+### 404 page
+
+Unknown URLs return `404.html` with a 404 status thanks to `assets.not_found_handling: "404-page"` in `wrangler.jsonc`; without that setting the Worker answers with an empty body. Because Workers looks for a literal `404.html`, the `localized-404` integration in `astro.config.mjs` also writes `es/404.html` (a copy of `es/404/index.html`), so misses under `/es/` stay in Spanish.
 
 ### Other hosts
 

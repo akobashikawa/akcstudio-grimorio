@@ -33,6 +33,18 @@ const checks = [
     contentType: "image/png",
     magic: [0x89, 0x50, 0x4e, 0x47],
   },
+  {
+    path: "/a-page-that-does-not-exist/",
+    status: 404,
+    contentType: "text/html",
+    contains: ['class="missing-number"', 'name="robots" content="noindex'],
+  },
+  {
+    path: "/es/a-page-that-does-not-exist/",
+    status: 404,
+    contentType: "text/html",
+    contains: ["Esta página no existe", 'lang="es"'],
+  },
 ];
 
 let server;
@@ -74,7 +86,10 @@ async function runCheck(check, attempts = 3) {
         signal: AbortSignal.timeout(15_000),
       });
       const problems = [];
-      if (response.status !== 200) problems.push(`status ${response.status}`);
+      const expectedStatus = check.status ?? 200;
+      if (response.status !== expectedStatus) {
+        problems.push(`status ${response.status}, expected ${expectedStatus}`);
+      }
       const contentType = response.headers.get("content-type") ?? "";
       if (check.contentType && !contentType.startsWith(check.contentType)) {
         problems.push(`content-type ${contentType || "(none)"}`);

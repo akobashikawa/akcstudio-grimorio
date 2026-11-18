@@ -3,10 +3,35 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 import vue from "@astrojs/vue";
 import tailwindcss from "@tailwindcss/vite";
-import { readdirSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadEnv } from "vite";
 
 import cloudflare from "@astrojs/cloudflare";
+
+// Workers serves the closest literal `404.html` when `not_found_handling` is
+// "404-page", but Astro writes the Spanish route to `es/404/index.html`.
+// Mirror that file as `es/404.html` so misses under `/es/` stay in Spanish.
+/** @returns {import("astro").AstroIntegration} */
+function localized404() {
+  return {
+    name: "localized-404",
+    hooks: {
+      "astro:build:done": ({ dir, logger }) => {
+        const clientDir = fileURLToPath(dir);
+        for (const entry of readdirSync(clientDir, { withFileTypes: true })) {
+          if (!entry.isDirectory() || entry.name.startsWith("_")) continue;
+          const source = join(clientDir, entry.name, "404", "index.html");
+          if (!existsSync(source)) continue;
+          const target = join(clientDir, entry.name, "404.html");
+          copyFileSync(source, target);
+          logger.info(`created ${entry.name}/404.html`);
+        }
+      },
+    },
+  };
+}
 
 const { SITE_URL = "https://akcstudio-grimorio.akobashikawa.workers.dev" } =
   loadEnv(process.env.NODE_ENV ?? "production", process.cwd(), "SITE_URL");
@@ -73,11 +98,14 @@ export default defineConfig({
 
   integrations: [
     vue(),
+    localized404(),
     sitemap({
       // Link each page to its translation for search engines.
       i18n: { defaultLocale: "en", locales: { es: "es-ES", en: "en-US" } },
       filter: (page) =>
-        !["/404/", "/404.html"].includes(new URL(page).pathname),
+        !["/404/", "/404.html", "/es/404/", "/es/404.html"].includes(
+          new URL(page).pathname,
+        ),
       serialize(item) {
         const path = new URL(item.url).pathname;
         const listing = /^\/(es\/)?(posts\/)?$/.exec(path);
