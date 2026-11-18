@@ -40,7 +40,7 @@ Open <http://localhost:4321>.
 | --------------------- | ---------------------------------------- |
 | `pnpm dev`            | Start the dev server                     |
 | `pnpm build`          | Type-check, then build to `dist/client/` |
-| `pnpm deploy`         | Build and deploy to Cloudflare Workers   |
+| `pnpm run deploy`     | Build and deploy to Cloudflare Workers   |
 | `pnpm smoke`          | Smoke-test the build or a deployed URL   |
 | `pnpm new-post`       | Scaffold a bilingual post draft          |
 | `pnpm preview`        | Serve the production build locally       |
@@ -130,10 +130,10 @@ Set `SITE_URL` to your production origin before building so canonical URLs, feed
 1. Deploy:
 
    ```sh
-   pnpm deploy
+   pnpm run deploy
    ```
 
-   This type-checks, builds, and runs `wrangler deploy`. The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
+   This type-checks, builds, and runs `wrangler deploy`. Use `pnpm run` because `pnpm deploy` is a reserved pnpm command for workspaces. The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
 
 2. Set `SITE_URL=https://yourdomain.com` in your local `.env` (or as the `SITE_URL` repository variable for CI), add your custom domain, and redeploy.
 
