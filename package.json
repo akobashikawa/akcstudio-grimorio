@@ -2,25 +2,26 @@
   "name": "akcstudio-grimorio",
   "type": "module",
   "version": "1.0.0",
-  "description": "A fast, bilingual blog theme for Astro: guides, notes, essays, or a dev log.",
+  "description": "Blog personal bilingüe (inglés/español) construido con Astro, Vue y Tailwind CSS y desplegado en Cloudflare Workers.",
   "license": "MIT",
-  "homepage": "https://grimorio-astro.pages.dev",
+  "homepage": "https://akcstudio-grimorio.akobashikawa.workers.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sud0pls/Grimorio-astro.git"
+    "url": "https://github.com/akobashikawa/akcstudio-grimorio.git"
   },
   "keywords": [
     "astro",
-    "astro-theme",
     "blog",
     "bilingual",
     "i18n",
     "vue",
-    "tailwindcss"
+    "tailwindcss",
+    "cloudflare-workers"
   ],
   "scripts": {
     "dev": "astro dev",
     "build": "pnpm check && astro build",
+    "deploy": "pnpm build && wrangler deploy",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro sync && astro check && vue-tsc --noEmit",

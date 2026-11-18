@@ -6,7 +6,7 @@ Blog con Astro y Grimorio.
 
 A fast, bilingual blog theme for Astro, built for writing of any kind: guides, notes, essays, or a dev log. English and Spanish out of the box, light/dark themes, full-text search, and social images generated at build time. No client-side framework runs the page: Vue powers only the few interactive islands, everything else ships as static HTML.
 
-**[Live demo](https://grimorio-astro.pages.dev)** · built with [Astro](https://astro.build), [Vue](https://vuejs.org) and [Tailwind CSS](https://tailwindcss.com).
+**[Live site](https://akcstudio-grimorio.akobashikawa.workers.dev)** · built with [Astro](https://astro.build), [Vue](https://vuejs.org) and [Tailwind CSS](https://tailwindcss.com).
 
 > Grimorio ships with example posts and copy so you can see every feature working. Replace them with your own — see [Make it yours](#make-it-yours).
 
@@ -40,6 +40,7 @@ Open <http://localhost:4321>.
 | --------------------- | ---------------------------------------- |
 | `pnpm dev`            | Start the dev server                     |
 | `pnpm build`          | Type-check, then build to `dist/client/` |
+| `pnpm deploy`         | Build and deploy to Cloudflare Workers   |
 | `pnpm preview`        | Serve the production build locally       |
 | `pnpm check`          | Type-check Astro, Vue, and TypeScript    |
 | `pnpm test`           | Build and run the browser tests          |
@@ -50,7 +51,7 @@ Open <http://localhost:4321>.
 
 ```
 src/
-├─ assets/            Avatar (and optional per-post banner overrides)
+├─ assets/            Logo/avatar (and optional per-post banner overrides)
 ├─ components/        Vue islands + Astro layout pieces
 ├─ content/posts/     Your posts, as es/ and en/ Markdown
 ├─ data/              Category and projects data
@@ -66,15 +67,15 @@ public/               Favicons, fonts, static SVGs
 
 Everything you'll normally touch lives in a handful of files:
 
-| What                          | Where                                                 |
-| ----------------------------- | ----------------------------------------------------- |
-| Site name, author, nav, links | `src/site.config.json`                                |
-| All interface text            | `src/i18n/es.json`, `src/i18n/en.json`                |
-| Avatar                        | `src/assets/avatar.jpg` (optimized WebP is generated) |
-| Theme colors                  | `src/styles/global.css` (`:root` and `:root.dark`)    |
-| Posts                         | `src/content/posts/es/`, `src/content/posts/en/`      |
-| Projects page                 | `src/data/projects.ts`                                |
-| Production domain             | `SITE_URL` in `.env` (see `.env.example`)             |
+| What                          | Where                                              |
+| ----------------------------- | -------------------------------------------------- |
+| Site name, author, nav, links | `src/site.config.json`                             |
+| All interface text            | `src/i18n/es.json`, `src/i18n/en.json`             |
+| Avatar and logo               | `src/assets/akcstudio-logo.png`                    |
+| Theme colors                  | `src/styles/global.css` (`:root` and `:root.dark`) |
+| Posts                         | `src/content/posts/es/`, `src/content/posts/en/`   |
+| Projects page                 | `src/data/projects.ts`                             |
+| Production domain             | `SITE_URL` in `.env` (see `.env.example`)          |
 
 After cloning, delete the example posts in `src/content/posts/` and the favicons in `public/` you want to replace, then set your domain so the canonical URLs, feeds, sitemap, and social images point at the right place.
 
@@ -114,14 +115,13 @@ Set `SITE_URL` to your production origin before building so canonical URLs, feed
 
 ### Cloudflare Workers
 
-1. Build and deploy:
+1. Deploy:
 
    ```sh
-   pnpm build
-   pnpm exec wrangler deploy
+   pnpm deploy
    ```
 
-   The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
+   This type-checks, builds, and runs `wrangler deploy`. The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
 
 2. Set `SITE_URL=https://yourdomain.com` as a build-time variable (Workers Builds → **Settings → Variables and secrets**, or your local `.env`), add your custom domain, and redeploy.
 

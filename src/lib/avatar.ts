@@ -1,9 +1,9 @@
 import { getImage } from "astro:assets";
-import avatar from "../assets/avatar.jpg";
+import avatar from "../assets/akcstudio-logo.png";
 
 export type Avatar = { src: string; srcset: string };
 
-// Replace src/assets/avatar.jpg to change the avatar everywhere.
+// Replace src/assets/akcstudio-logo.png to change the avatar everywhere.
 export async function getAvatar(size: number): Promise<Avatar> {
   const [normal, retina] = await Promise.all(
     [1, 2].map((density) =>
@@ -15,7 +15,7 @@ export async function getAvatar(size: number): Promise<Avatar> {
       }),
     ),
   );
-  return { src: normal.src, srcset: `${normal.src} 1x, ${retina.src} 2x` };
+  return { src: retina.src, srcset: `${normal.src} 1x, ${retina.src} 2x` };
 }
 
 // JPEG keeps the social preview compatible with every platform.
