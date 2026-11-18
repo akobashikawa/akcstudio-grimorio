@@ -46,6 +46,7 @@ Open <http://localhost:4321>.
 | `pnpm preview`        | Serve the production build locally       |
 | `pnpm check`          | Type-check Astro, Vue, and TypeScript    |
 | `pnpm test`           | Build and run the browser tests          |
+| `pnpm test:a11y`      | Run the axe accessibility checks         |
 | `pnpm format`         | Format the codebase with Prettier        |
 | `pnpm generate-types` | Regenerate Cloudflare binding types      |
 
@@ -175,6 +176,10 @@ pnpm smoke https://akcstudio-grimorio.akobashikawa.workers.dev
 
 The quality-check workflow runs the local variant on every push and pull request, and the deploy workflow runs it against production after each deploy.
 
+### Accessibility checks
+
+`tests/a11y.spec.ts` runs axe on the main pages in both languages and on the two 404 pages, covering WCAG 2.0/2.1 A and AA plus best practices. `pnpm test:a11y` runs only those checks; they are also part of `pnpm test:e2e` and CI.
+
 ### 404 page
 
 Unknown URLs return `404.html` with a 404 status thanks to `assets.not_found_handling: "404-page"` in `wrangler.jsonc`; without that setting the Worker answers with an empty body. Because Workers looks for a literal `404.html`, the `localized-404` integration in `astro.config.mjs` also writes `es/404.html` (a copy of `es/404/index.html`), so misses under `/es/` stay in Spanish.
@@ -204,7 +209,7 @@ pnpm generate-types
 
 A grouped PR carries a single lockfile change, so the coupled packages (Astro with its adapter and renderer, Tailwind with its Vite plugin) move together. Major bumps outside those groups arrive as individual PRs. GitHub Actions updates are grouped separately and run monthly.
 
-Every PR runs the quality-check workflow (type-check, post pairing, `pnpm audit --audit-level=high`, build, smoke test, and browser tests), which is also what keeps the lockfile free of known vulnerabilities.
+Every PR runs the quality-check workflow (type-check, post pairing, `pnpm audit --audit-level=high`, build, smoke test, browser tests, and axe accessibility checks), which is also what keeps the lockfile free of known vulnerabilities.
 
 ## Credits
 

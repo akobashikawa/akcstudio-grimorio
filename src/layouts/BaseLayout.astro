@@ -277,9 +277,9 @@ const jsonLd = JSON.stringify({
     </a>
     <Navigation pathname={Astro.url.pathname} lang={lang} client:load />
     <Search posts={posts} lang={lang} client:idle />
-    {!article && <h1 class="sr-only">{heroTitle || t("hero.title")}</h1>}
     <MainContainer>
       <main id="main-content" tabindex="-1">
+        {!article && <h1 class="sr-only">{heroTitle || t("hero.title")}</h1>}
         <slot />
       </main>
     </MainContainer>
