@@ -187,6 +187,21 @@ Because the output is static, you can still upload `dist/client/` to Netlify, Ve
 pnpm generate-types
 ```
 
+## Dependency updates
+
+`.github/dependabot.yml` opens grouped pull requests every Monday:
+
+| Group               | Packages                                            |
+| ------------------- | --------------------------------------------------- |
+| `astro`             | `astro`, `@astrojs/*`, `unifont`                    |
+| `cloudflare`        | `wrangler`, `@cloudflare/*`, `miniflare`, `workerd` |
+| `vite-and-tailwind` | `vite`, `tailwindcss`, `@tailwindcss/*`             |
+| `minor-and-patch`   | everything else, minor and patch releases           |
+
+A grouped PR carries a single lockfile change, so the coupled packages (Astro with its adapter and renderer, Tailwind with its Vite plugin) move together. Major bumps outside those groups arrive as individual PRs. GitHub Actions updates are grouped separately and run monthly.
+
+Every PR runs the quality-check workflow (type-check, post pairing, `pnpm audit --audit-level=high`, build, smoke test, and browser tests), which is also what keeps the lockfile free of known vulnerabilities.
+
 ## Credits
 
 Grimorio is based on [Kanade-Astro](https://github.com/sudoriaa/Kanade-Astro) by sudoriaa, reworked and extended (design, i18n defaults, content, and features).

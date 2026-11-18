@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    groups:
+      # Astro and its first-party packages are released together: a single PR
+      # keeps the framework, adapter, integrations and renderer in sync.
+      astro:
+        patterns:
+          - astro
+          - "@astrojs/*"
+          # Pinned by Astro itself (fonts, Vite plugin, internal config).
+          - unifont
+          - "@astrojs/vite-plugin-astro"
+      cloudflare:
+        patterns:
+          - wrangler
+          - "@cloudflare/*"
+          - miniflare
+          - workerd
+      vite-and-tailwind:
+        patterns:
+          - vite
+          - tailwindcss
+          - "@tailwindcss/*"
+      # Everything else: one PR per week for safe updates. Majors stay
+      # separate so they can be reviewed one by one.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    labels:
+      - dependencies
