@@ -209,6 +209,8 @@ pnpm generate-types
 
 A grouped PR carries a single lockfile change, so the coupled packages (Astro with its adapter and renderer, Tailwind with its Vite plugin) move together. Major bumps outside those groups arrive as individual PRs. GitHub Actions updates are grouped separately and run monthly.
 
+Dependabot only proposes versions that are at least three days old (its release cooldown), and it runs pnpm with `--config.minimum-release-age=4320`. If the lockfile already pins something younger than that, the update job fails with `ERR_PNPM_NO_MATURE_MATCHING_VERSION` for every dependency. That is not a configuration error: wait until the package is three days old and re-run the job from **Insights → Dependency graph → Dependabot → Check for updates**.
+
 Every PR runs the quality-check workflow (type-check, post pairing, `pnpm audit --audit-level=high`, build, smoke test, browser tests, and axe accessibility checks), which is also what keeps the lockfile free of known vulnerabilities.
 
 ## Credits
