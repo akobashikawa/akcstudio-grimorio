@@ -6,11 +6,10 @@ import tailwindcss from "@tailwindcss/vite";
 import { readdirSync, readFileSync } from "node:fs";
 import { loadEnv } from "vite";
 
-const { SITE_URL = "https://akcstudio-grimorio.akobashikawa.workers.dev" } = loadEnv(
-  process.env.NODE_ENV ?? "production",
-  process.cwd(),
-  "SITE_URL",
-);
+import cloudflare from "@astrojs/cloudflare";
+
+const { SITE_URL = "https://akcstudio-grimorio.akobashikawa.workers.dev" } =
+  loadEnv(process.env.NODE_ENV ?? "production", process.cwd(), "SITE_URL");
 const site = new URL(SITE_URL);
 if (
   !["http:", "https:"].includes(site.protocol) ||
@@ -59,14 +58,19 @@ export default defineConfig({
   site: site.href,
   output: "static",
   trailingSlash: "always",
+
   // Preserve the spacing between inline elements when migrating from Astro 5.
   compressHTML: true,
+
   // Inline the small stylesheet to avoid a render-blocking request.
   build: { inlineStylesheets: "always" },
+
   // Fetch pages on hover so navigation feels instant.
   prefetch: { prefetchAll: true, defaultStrategy: "hover" },
+
   // Prerender prefetched pages with the Speculation Rules API where supported.
   experimental: { clientPrerender: true },
+
   integrations: [
     vue(),
     sitemap({
@@ -84,7 +88,12 @@ export default defineConfig({
       },
     }),
   ],
+
   vite: {
     plugins: [tailwindcss()],
   },
+
+  // Prerender with Node instead of workerd: the OG image routes use sharp,
+  // which is a native Node module and cannot run inside workerd.
+  adapter: cloudflare({ prerenderEnvironment: "node" }),
 });

@@ -23,7 +23,7 @@ A fast, bilingual blog theme for Astro, built for writing of any kind: guides, n
 
 ## Tech stack
 
-Astro 7 · Vue 3 (islands only) · Tailwind CSS 4 · TypeScript · Satori + Sharp for image generation · Playwright for tests.
+Astro 7 · Vue 3 (islands only) · Tailwind CSS 4 · TypeScript · Satori + Sharp for image generation · Cloudflare Workers (`@astrojs/cloudflare` + Wrangler) · Playwright for tests.
 
 ## Quick start
 
@@ -36,14 +36,15 @@ pnpm dev
 
 Open <http://localhost:4321>.
 
-| Command         | What it does                                    |
-| --------------- | ----------------------------------------------- |
-| `pnpm dev`      | Start the dev server                            |
-| `pnpm build`    | Type-check, then build to `dist/`               |
-| `pnpm preview`  | Serve the production build locally              |
-| `pnpm check`    | Type-check Astro, Vue, and TypeScript           |
-| `pnpm test`     | Build and run the browser tests                 |
-| `pnpm format`   | Format the codebase with Prettier               |
+| Command               | What it does                             |
+| --------------------- | ---------------------------------------- |
+| `pnpm dev`            | Start the dev server                     |
+| `pnpm build`          | Type-check, then build to `dist/client/` |
+| `pnpm preview`        | Serve the production build locally       |
+| `pnpm check`          | Type-check Astro, Vue, and TypeScript    |
+| `pnpm test`           | Build and run the browser tests          |
+| `pnpm format`         | Format the codebase with Prettier        |
+| `pnpm generate-types` | Regenerate Cloudflare binding types      |
 
 ## Project structure
 
@@ -65,15 +66,15 @@ public/               Favicons, fonts, static SVGs
 
 Everything you'll normally touch lives in a handful of files:
 
-| What                        | Where                                                    |
-| --------------------------- | -------------------------------------------------------- |
-| Site name, author, nav, links | `src/site.config.json`                                 |
-| All interface text          | `src/i18n/es.json`, `src/i18n/en.json`                   |
-| Avatar                      | `src/assets/avatar.jpg` (optimized WebP is generated)    |
-| Theme colors                | `src/styles/global.css` (`:root` and `:root.dark`)       |
-| Posts                       | `src/content/posts/es/`, `src/content/posts/en/`         |
-| Projects page               | `src/data/projects.ts`                                   |
-| Production domain           | `SITE_URL` in `.env` (see `.env.example`)                |
+| What                          | Where                                                 |
+| ----------------------------- | ----------------------------------------------------- |
+| Site name, author, nav, links | `src/site.config.json`                                |
+| All interface text            | `src/i18n/es.json`, `src/i18n/en.json`                |
+| Avatar                        | `src/assets/avatar.jpg` (optimized WebP is generated) |
+| Theme colors                  | `src/styles/global.css` (`:root` and `:root.dark`)    |
+| Posts                         | `src/content/posts/es/`, `src/content/posts/en/`      |
+| Projects page                 | `src/data/projects.ts`                                |
+| Production domain             | `SITE_URL` in `.env` (see `.env.example`)             |
 
 After cloning, delete the example posts in `src/content/posts/` and the favicons in `public/` you want to replace, then set your domain so the canonical URLs, feeds, sitemap, and social images point at the right place.
 
@@ -107,23 +108,52 @@ Languages are declared in `src/i18n/index.ts` (`languages` and `defaultLanguage`
 
 ## Deployment
 
-The site is fully static — any host that serves a folder works (Cloudflare Pages, Netlify, Vercel, GitHub Pages, a plain bucket). Set `SITE_URL` to your production origin before building so metadata is correct.
+The site renders to static HTML, so the output in `dist/client/` can be served by any static host. This repo is configured for **Cloudflare Workers** through the `@astrojs/cloudflare` adapter and `wrangler.jsonc`: the build writes the static assets and the Worker entrypoint, and Wrangler picks both up automatically.
 
-### Cloudflare Pages
+Set `SITE_URL` to your production origin before building so canonical URLs, feeds, the sitemap, and social images point at the right place.
 
-1. Push the repo to GitHub.
-2. In Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** and pick the repo.
-3. Build settings:
+### Cloudflare Workers
 
-   | Field                  | Value        |
-   | ---------------------- | ------------ |
-   | Framework preset       | Astro        |
-   | Build command          | `pnpm build` |
-   | Build output directory | `dist`       |
+1. Build and deploy:
 
-4. Add `SITE_URL=https://yourdomain.com` under **Settings → Environment variables**, then add your domain under **Custom domains**.
+   ```sh
+   pnpm build
+   pnpm exec wrangler deploy
+   ```
+
+   The first deploy provisions the bindings declared by the adapter and prints a `*.workers.dev` URL.
+
+2. Set `SITE_URL=https://yourdomain.com` as a build-time variable (Workers Builds → **Settings → Variables and secrets**, or your local `.env`), add your custom domain, and redeploy.
+
+To run the built site against the Cloudflare runtime locally:
+
+```sh
+pnpm build
+pnpm exec wrangler dev
+```
+
+### Workers Builds (CI/CD)
+
+Connect the repository in the Cloudflare dashboard and configure:
+
+| Field          | Value                       |
+| -------------- | --------------------------- |
+| Build command  | `pnpm build`                |
+| Deploy command | `pnpm exec wrangler deploy` |
 
 Cloudflare reads the Node version from `.node-version` and pnpm from `package.json`. Every push to `main` ships a new version.
+
+### Other hosts
+
+Because the output is static, you can still upload `dist/client/` to Netlify, Vercel, GitHub Pages, or a plain bucket. If you never deploy to Cloudflare, you can remove the adapter and `wrangler.jsonc`.
+
+### Cloudflare binding types
+
+`worker-configuration.d.ts` contains the generated types for the bindings in `wrangler.jsonc`. Regenerate it after changing the Wrangler config:
+
+```sh
+pnpm generate-types
+```
 
 ## Credits
 
