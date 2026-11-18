@@ -42,6 +42,7 @@ Open <http://localhost:4321>.
 | `pnpm build`          | Type-check, then build to `dist/client/` |
 | `pnpm deploy`         | Build and deploy to Cloudflare Workers   |
 | `pnpm smoke`          | Smoke-test the build or a deployed URL   |
+| `pnpm new-post`       | Scaffold a bilingual post draft          |
 | `pnpm preview`        | Serve the production build locally       |
 | `pnpm check`          | Type-check Astro, Vue, and TypeScript    |
 | `pnpm test`           | Build and run the browser tests          |
@@ -84,6 +85,14 @@ After cloning, delete the example posts in `src/content/posts/` and the favicons
 
 Create `src/content/posts/<lang>/<slug>.md`. Use the **same slug** in `es/` and `en/` so the language switch links the two versions.
 
+Scaffold both files at once:
+
+```sh
+pnpm new-post my-post --category guides
+```
+
+It creates `en/my-post.md` and `es/my-post.md` as drafts with the same slug. The command also accepts `--date`, `--title`, and `--published`.
+
 ```yaml
 ---
 title: "My post"
@@ -97,6 +106,8 @@ draft: false # drafts are excluded from the build
 updated: 2026-10-01 # optional: last-reviewed date, used in the sitemap
 ---
 ```
+
+`pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: every post must have a counterpart in the other language, and its `lang` must match the folder.
 
 The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work. For diagrams, drop an SVG in `public/` and reference it with a `<figure class="diagram">`.
 
