@@ -146,14 +146,14 @@ pnpm exec wrangler dev
 
 ### Continuous deployment
 
-The repo includes `.github/workflows/deploy.yml`: every push to `main` (or a manual run) builds, deploys with Wrangler, and smoke-tests the production URL. Add these repository secrets under **Settings → Secrets and variables → Actions**:
+The repo includes `.github/workflows/deploy.yml`: every push to `master` (or a manual run) builds, deploys with Wrangler, and smoke-tests the production URL. Add these repository secrets under **Settings → Secrets and variables → Actions**:
 
 | Secret                  | Value                                               |
 | ----------------------- | --------------------------------------------------- |
 | `CLOUDFLARE_API_TOKEN`  | API token with **Workers Scripts: Edit** permission |
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID                          |
 
-Optionally set the `SITE_URL` repository variable to override the default production origin.
+Optionally set the `SITE_URL` repository variable to override the default production origin. While the secrets are missing, the workflow builds and skips the deploy with a warning annotation instead of failing.
 
 If you prefer Workers Builds, connect the repository in the Cloudflare dashboard instead and disable `.github/workflows/deploy.yml` so pushes are not deployed twice:
 
