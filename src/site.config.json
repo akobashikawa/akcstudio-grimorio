@@ -1,32 +1,32 @@
 {
   "site": {
-    "name": "Grimorio",
-    "logoText": "Grimorio",
+    "name": "AKC Studio",
+    "logoText": "AKC Studio",
     "favicon": "/favicon.ico",
     "keywords": {
       "es": [
-        "Grimorio",
-        "plantilla Astro",
-        "blog de seguridad",
-        "seguridad ofensiva",
-        "Hack The Box"
+        "AKC Studio",
+        "blog con Astro y Grimorio",
+        "blog personal",
+        "desarrollo de software",
+        "ingeniería de software"
       ],
       "en": [
-        "Grimorio",
-        "Astro theme",
-        "security blog",
-        "offensive security",
-        "Hack The Box"
+        "AKC Studio",
+        "blog with Astro and Grimorio",
+        "personal blog",
+        "software development",
+        "software engineering"
       ]
     }
   },
   "author": {
     "name": {
-      "es": "Grimorio",
-      "en": "Grimorio"
+      "es": "Antonio Kobashikawa",
+      "en": "Antonio Kobashikawa"
     },
-    "handle": "Grimorio",
-    "github": "https://github.com/sud0pls/Grimorio-astro"
+    "handle": "akcstudio-grimorio",
+    "github": "https://github.com/akobashikawa/akcstudio-grimorio"
   },
   "navigation": [
     {

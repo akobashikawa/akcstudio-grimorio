@@ -1,4 +1,8 @@
-# Grimorio
+# AKC Studio - Grimorio
+
+Blog con Astro y Grimorio.
+
+---
 
 A fast, bilingual blog theme for Astro, built for writing of any kind: guides, notes, essays, or a dev log. English and Spanish out of the box, light/dark themes, full-text search, and social images generated at build time. No client-side framework runs the page: Vue powers only the few interactive islands, everything else ships as static HTML.
 

@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { readdirSync, readFileSync } from "node:fs";
 import { loadEnv } from "vite";
 
-const { SITE_URL = "https://grimorio-astro.pages.dev" } = loadEnv(
+const { SITE_URL = "https://akcstudio-grimorio.akobashikawa.workers.dev" } = loadEnv(
   process.env.NODE_ENV ?? "production",
   process.cwd(),
   "SITE_URL",
