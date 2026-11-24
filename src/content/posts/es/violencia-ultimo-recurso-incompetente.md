@@ -16,7 +16,7 @@ Nos dice que cuando pretendes usar la violencia es porque has llegado a tu grado
 
 Cuando eres competente, enfrentas un problema con confianza, escuchas, empatizas, aun con los que piensan distinto, y tienes la disposición para aceptar que la solución puede ser diferente a la que imaginabas.
 
-Se dice que cada problema contiene su solución. Puede ser que esa solución contenga una verdad incómoda de aceptar y termines obstruyéndo la búsqueda, aunque pienses que avanzas.
+Se dice que cada problema contiene su solución. Puede ser que esa solución contenga una verdad incómoda de aceptar y termines obstruyendo la búsqueda, aunque pienses que avanzas.
 
 Conforme te acercas a tu grado de incompetencia, empiezas a evadir el problema, tratando de reemplazarlo por otros para los que te sientes más competente.
 
