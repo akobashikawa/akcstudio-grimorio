@@ -1,7 +1,7 @@
 ---
 title: "Welcome to AKC Studio"
-description: "A quick tour."
-date: 2026-11-24
+description: "Hello World"
+date: 2026-11-22
 lang: en
 category: notes
 tags: ["Astro", "Blogging"]
