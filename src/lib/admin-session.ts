@@ -21,6 +21,9 @@ export function loadStoredSession(): AdminSession | null {
 export function storeSession(session: AdminSession): void {
   const store = storage();
   if (!store) throw new Error("This browser does not support localStorage.");
+  if (store.getItem(ADMIN_STORAGE_KEYS.token) !== session.token) {
+    store.removeItem(ADMIN_STORAGE_KEYS.writeVerified);
+  }
   store.setItem(ADMIN_STORAGE_KEYS.token, session.token);
   store.setItem(ADMIN_STORAGE_KEYS.user, session.user);
   if (session.expires) {
@@ -30,10 +33,19 @@ export function storeSession(session: AdminSession): void {
   }
 }
 
+export function hasWriteVerified(): boolean {
+  return storage()?.getItem(ADMIN_STORAGE_KEYS.writeVerified) === "1";
+}
+
+export function markWriteVerified(): void {
+  storage()?.setItem(ADMIN_STORAGE_KEYS.writeVerified, "1");
+}
+
 export function clearStoredSession(): void {
   const store = storage();
   if (!store) return;
   store.removeItem(ADMIN_STORAGE_KEYS.token);
   store.removeItem(ADMIN_STORAGE_KEYS.user);
   store.removeItem(ADMIN_STORAGE_KEYS.expires);
+  store.removeItem(ADMIN_STORAGE_KEYS.writeVerified);
 }

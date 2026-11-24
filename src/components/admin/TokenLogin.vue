@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import type { AdminRepoConfig } from "../../lib/admin-config";
-import { storeSession } from "../../lib/admin-session";
+import { markWriteVerified, storeSession } from "../../lib/admin-session";
 import {
   GithubApiError,
   validateToken,
+  verifyWriteAccess,
   type AdminSession,
 } from "../../lib/github-content";
 
@@ -41,7 +42,7 @@ function errorMessage(reason: unknown): string {
       return "Invalid or expired token. Generate a new one and try again.";
     }
     if (reason.status === 403) {
-      return "GitHub denied access. Check that the token has Contents: Read and write.";
+      return `GitHub denied access: ${reason.message}. Create a fine-grained token with Contents: Read and write and select ${props.repo.owner}/${props.repo.repo} under Only select repositories.`;
     }
     if (reason.status === 404) {
       return `This token cannot access ${props.repo.owner}/${props.repo.repo}. Check the repository selection.`;
@@ -68,8 +69,12 @@ async function submit() {
   try {
     const result = await validateToken(props.repo, value);
     if (!result.canWrite) {
-      error.value =
-        "This token does not have write access to the repository.";
+      error.value = "This token does not have write access to the repository.";
+      return;
+    }
+    const write = await verifyWriteAccess(props.repo, value);
+    if (!write.canWrite) {
+      error.value = `GitHub denied a write check: ${write.message}. Create a fine-grained token with Contents: Read and write and select ${props.repo.owner}/${props.repo.repo} under Only select repositories.`;
       return;
     }
     const session: AdminSession = {
@@ -78,6 +83,7 @@ async function submit() {
       expires: result.expires,
     };
     storeSession(session);
+    markWriteVerified();
     token.value = "";
     emit("authenticated", session);
   } catch (reason) {

@@ -57,7 +57,7 @@ function errorMessage(reason: unknown): string {
       return "This post no longer exists on GitHub.";
     }
     if (reason.status === 403) {
-      return "GitHub denied access. Check the token permissions.";
+      return `GitHub denied access: ${reason.message}. The token needs Contents: Read and write and access to ${props.repo.owner}/${props.repo.repo}. If it already has that, log out and reconnect.`;
     }
     return reason.message;
   }
@@ -236,11 +236,12 @@ async function save() {
         </label>
         <label class="admin-field">
           <span>Category</span>
-          <select
-            v-model="form.category"
-            :class="{ invalid: errors.category }"
-          >
-            <option v-for="category in categories" :key="category" :value="category">
+          <select v-model="form.category" :class="{ invalid: errors.category }">
+            <option
+              v-for="category in categories"
+              :key="category"
+              :value="category"
+            >
               {{ category }}
             </option>
           </select>

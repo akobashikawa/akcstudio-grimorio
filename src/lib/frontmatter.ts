@@ -24,9 +24,7 @@ export type ParsedPost = {
   body: string;
 };
 
-export type FrontmatterErrors = Partial<
-  Record<keyof PostFrontmatter, string>
->;
+export type FrontmatterErrors = Partial<Record<keyof PostFrontmatter, string>>;
 
 export type FrontmatterValidation =
   | { ok: true; value: PostFrontmatter }
@@ -112,7 +110,11 @@ export function validateFrontmatter(
   if (!date) errors.date = "Use a valid date (YYYY-MM-DD).";
 
   let updated: string | undefined;
-  if (value.updated !== undefined && value.updated !== null && value.updated !== "") {
+  if (
+    value.updated !== undefined &&
+    value.updated !== null &&
+    value.updated !== ""
+  ) {
     updated = normalizeDate(value.updated);
     if (!updated) errors.updated = "Use a valid date (YYYY-MM-DD).";
   }
@@ -122,7 +124,8 @@ export function validateFrontmatter(
     errors.lang = `Language must match the folder (${expectedLang}).`;
   }
 
-  const categoryValue = typeof value.category === "string" ? value.category : "";
+  const categoryValue =
+    typeof value.category === "string" ? value.category : "";
   const category = normalizeCategory(categoryValue);
   if (!categoryNames.includes(category as Category)) {
     errors.category = "Choose a valid category.";

@@ -25,6 +25,7 @@ const emit = defineEmits<{
 const defaultCategory = props.categories.includes("notes" as Category)
   ? "notes"
   : (props.categories[0] ?? "notes");
+const slugPlaceholder = "<slug>";
 
 const form = reactive({
   slug: "",
@@ -54,7 +55,7 @@ function errorMessage(reason: unknown): string {
       return "Your GitHub token expired. Connect again.";
     }
     if (reason.status === 403) {
-      return "GitHub denied access. Check the token permissions.";
+      return `GitHub denied access: ${reason.message}. The token needs Contents: Read and write and access to ${props.repo.owner}/${props.repo.repo}. If it already has that, log out and reconnect.`;
     }
     if (reason.status === 409) {
       return reason.message || "A post with this slug already exists.";
@@ -67,7 +68,9 @@ function errorMessage(reason: unknown): string {
   if (reason instanceof TypeError) {
     return "Could not reach GitHub. Check your connection and try again.";
   }
-  return reason instanceof Error ? reason.message : "Could not create the post.";
+  return reason instanceof Error
+    ? reason.message
+    : "Could not create the post.";
 }
 
 function validate(): boolean {
@@ -222,8 +225,8 @@ async function submit() {
 
       <div class="admin-paths">
         <p>Files to create:</p>
-        <code>src/content/posts/en/{{ form.slug || "<slug>" }}.md</code>
-        <code>src/content/posts/es/{{ form.slug || "<slug>" }}.md</code>
+        <code>src/content/posts/en/{{ form.slug || slugPlaceholder }}.md</code>
+        <code>src/content/posts/es/{{ form.slug || slugPlaceholder }}.md</code>
       </div>
 
       <p v-if="error" class="admin-error" role="alert">{{ error }}</p>

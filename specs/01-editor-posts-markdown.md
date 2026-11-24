@@ -1,6 +1,6 @@
 # SPEC 01 — Editor de posts Markdown desde `/admin/`
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** —
 > **Date:** 2026-11-24
 > **Objective:** Permitir editar y crear posts Markdown bilingües desde `/admin/` usando la GitHub Contents API y un PAT, con commit directo a `master`.
@@ -145,22 +145,22 @@ Si cualquiera de los dos archivos ya existe, se aborta antes de escribir.
 
 ## Acceptance criteria
 
-- [ ] `/admin/` carga sin token y muestra el formulario de conexión con GitHub.
-- [ ] Un token sin permiso de escritura muestra un error y no se guarda.
-- [ ] Un token válido muestra el usuario de GitHub y permite cerrar sesión.
-- [ ] El token solo se guarda en `localStorage` y solo se envía a `api.github.com`.
-- [ ] La lista muestra todos los posts de `en` y `es`, incluidos los `draft: true`.
-- [ ] Editar un post existente carga título, descripción, fecha, categoría, tags, featured, draft y cuerpo.
-- [ ] Guardar un post existente crea un commit en `master` y actualiza `updated` con la fecha actual.
-- [ ] Si el `sha` remoto cambió, aparece un aviso de conflicto y no se sobrescribe el archivo.
-- [ ] Crear un post genera `src/content/posts/en/{slug}.md` y `src/content/posts/es/{slug}.md` en un solo commit.
-- [ ] El post nuevo tiene `draft: true`, descripciones pendientes y `lang` correcto en cada archivo.
-- [ ] Un slug duplicado o inválido se rechaza antes de escribir.
-- [ ] La vista previa renderiza Markdown y no ejecuta HTML peligroso.
-- [ ] El botón **Edit** aparece en un post solo cuando hay token guardado y abre el post correcto.
-- [ ] `/admin/` incluye `noindex`, no aparece en el sitemap y está bloqueado en `robots.txt`.
-- [ ] `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
-- [ ] No se modifica ningún archivo de `src/content/posts/` durante la implementación salvo los posts de prueba manuales.
+- [x] `/admin/` carga sin token y muestra el formulario de conexión con GitHub.
+- [x] Un token sin permiso de escritura muestra un error y no se guarda.
+- [x] Un token válido muestra el usuario de GitHub y permite cerrar sesión.
+- [x] El token solo se guarda en `localStorage` y solo se envía a `api.github.com`.
+- [x] La lista muestra todos los posts de `en` y `es`, incluidos los `draft: true`.
+- [x] Editar un post existente carga título, descripción, fecha, categoría, tags, featured, draft y cuerpo.
+- [x] Guardar un post existente crea un commit en `master` y actualiza `updated` con la fecha actual.
+- [x] Si el `sha` remoto cambió, aparece un aviso de conflicto y no se sobrescribe el archivo.
+- [x] Crear un post genera `src/content/posts/en/{slug}.md` y `src/content/posts/es/{slug}.md` en un solo commit.
+- [x] El post nuevo tiene `draft: true`, descripciones pendientes y `lang` correcto en cada archivo.
+- [x] Un slug duplicado o inválido se rechaza antes de escribir.
+- [x] La vista previa renderiza Markdown y no ejecuta HTML peligroso.
+- [x] El botón **Edit** aparece en un post solo cuando hay token guardado y abre el post correcto.
+- [x] `/admin/` incluye `noindex`, no aparece en el sitemap y está bloqueado en `robots.txt`.
+- [x] `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
+- [x] No se modifica ningún archivo de `src/content/posts/` durante la implementación salvo los posts de prueba manuales.
 
 ## Decisions
 
@@ -181,16 +181,16 @@ Si cualquiera de los dos archivos ya existe, se aborta antes de escribir.
 
 ## Risks
 
-| Risk | Mitigation |
-| --- | --- |
-| XSS que robe el PAT de `localStorage` | Sanitizar la preview con `DOMPurify`; no usar `v-html` con HTML sin sanitizar; token con permisos mínimos y expiración corta. |
-| Rate limit de GitHub al listar muchos posts | Usar el token autenticado, cachear la lista en memoria y añadir un botón de refresco manual. |
-| Fallo a mitad de creación de un par bilingüe | Crear ambos archivos en un solo commit con la Git Data API. |
-| Commit directo a `master` con contenido inválido | Validar el esquema en cliente; el workflow ejecuta `pnpm build` y `pnpm check` antes de desplegar. |
-| Conflicto entre dos pestañas o ediciones | Guardar con el `sha` original y mostrar aviso de recarga si GitHub responde `409`. |
-| Token expirado o revocado | Detectar `401`, borrar el token y volver al formulario de login. |
-| Preview distinta del render real de Astro | Avisar en el README de que la preview es aproximada y validar el resultado final en el sitio. |
-| `/admin/` visible para cualquiera | `noindex`, `robots.txt` y ausencia de enlaces públicos; la protección real es el PAT. |
+| Risk                                             | Mitigation                                                                                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| XSS que robe el PAT de `localStorage`            | Sanitizar la preview con `DOMPurify`; no usar `v-html` con HTML sin sanitizar; token con permisos mínimos y expiración corta. |
+| Rate limit de GitHub al listar muchos posts      | Usar el token autenticado, cachear la lista en memoria y añadir un botón de refresco manual.                                  |
+| Fallo a mitad de creación de un par bilingüe     | Crear ambos archivos en un solo commit con la Git Data API.                                                                   |
+| Commit directo a `master` con contenido inválido | Validar el esquema en cliente; el workflow ejecuta `pnpm build` y `pnpm check` antes de desplegar.                            |
+| Conflicto entre dos pestañas o ediciones         | Guardar con el `sha` original y mostrar aviso de recarga si GitHub responde `409`.                                            |
+| Token expirado o revocado                        | Detectar `401`, borrar el token y volver al formulario de login.                                                              |
+| Preview distinta del render real de Astro        | Avisar en el README de que la preview es aproximada y validar el resultado final en el sitio.                                 |
+| `/admin/` visible para cualquiera                | `noindex`, `robots.txt` y ausencia de enlaces públicos; la protección real es el PAT.                                         |
 
 ## What is **not** in this spec
 

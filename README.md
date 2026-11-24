@@ -144,6 +144,8 @@ Limitations:
 
 The admin still produces ordinary Markdown files, so `pnpm check` validates pairing and frontmatter during the deploy build.
 
+If the admin reports **GitHub denied access**, the token can read the repository but cannot write to it. Create a new fine-grained token with **Contents: Read and write** and select this repository under **Only select repositories**. Classic tokens need the `repo` scope. Logging in now performs a small write-capability check before storing the token. If the token is correct, also check that `master` does not block direct pushes.
+
 ### Adding a project
 
 Projects are listed from a typed array in `src/data/projects.ts`; there is no Markdown file or CMS. Add an object to the array returned by `getProjects()`:

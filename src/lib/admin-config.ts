@@ -10,6 +10,7 @@ export const ADMIN_STORAGE_KEYS = {
   token: "grimorio.github.token",
   user: "grimorio.github.user",
   expires: "grimorio.github.expires",
+  writeVerified: "grimorio.github.writeVerified",
 } as const;
 
 // The site config keeps the repository as a public GitHub URL; the admin only

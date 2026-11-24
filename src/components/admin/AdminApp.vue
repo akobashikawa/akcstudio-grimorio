@@ -4,13 +4,16 @@ import type { Category } from "../../data/post-options";
 import type { AdminRepoConfig } from "../../lib/admin-config";
 import {
   clearStoredSession,
+  hasWriteVerified,
   loadStoredSession,
+  markWriteVerified,
   storeSession,
 } from "../../lib/admin-session";
 import {
   GithubApiError,
   listPosts,
   validateToken,
+  verifyWriteAccess,
   type AdminSession,
   type CreatePostResult,
   type PostSummary,
@@ -50,6 +53,15 @@ onMounted(async () => {
       loginError.value =
         "This token does not have write access to the repository.";
       return;
+    }
+    if (!hasWriteVerified()) {
+      const write = await verifyWriteAccess(props.repo, stored.token);
+      if (!write.canWrite) {
+        clearStoredSession();
+        loginError.value = `The saved token cannot write to ${props.repo.owner}/${props.repo.repo}: ${write.message}. Connect again with a token that has Contents: Read and write.`;
+        return;
+      }
+      markWriteVerified();
     }
     const next: AdminSession = {
       token: stored.token,
@@ -92,6 +104,8 @@ async function loadPosts() {
       clearStoredSession();
       session.value = null;
       loginError.value = "Your GitHub token expired. Connect again.";
+    } else if (reason instanceof GithubApiError && reason.status === 403) {
+      postsError.value = `GitHub denied access: ${reason.message}. Check that the token has Contents: Read and write and access to ${props.repo.owner}/${props.repo.repo}.`;
     } else {
       postsError.value =
         reason instanceof Error ? reason.message : "Could not load posts.";

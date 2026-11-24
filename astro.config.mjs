@@ -134,5 +134,8 @@ export default defineConfig({
   // which is a native Node module and cannot run inside workerd. Images are
   // optimized at build time, so no Cloudflare Images binding is needed at
   // runtime.
-  adapter: cloudflare({ prerenderEnvironment: "node", imageService: "compile" }),
+  adapter: cloudflare({
+    prerenderEnvironment: "node",
+    imageService: "compile",
+  }),
 });

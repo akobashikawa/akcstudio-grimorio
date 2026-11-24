@@ -36,6 +36,9 @@ export type TokenValidation = AdminSession & {
   canWrite: boolean;
 };
 
+export type WriteAccessResult =
+  { canWrite: true } | { canWrite: false; status: number; message: string };
+
 export type PostFile = {
   lang: PostLanguage;
   slug: string;
@@ -181,10 +184,7 @@ async function githubFetch(
 
   if (options.allowNotFound && response.status === 404) return response;
   if (!response.ok) {
-    throw new GithubApiError(
-      response.status,
-      await readErrorMessage(response),
-    );
+    throw new GithubApiError(response.status, await readErrorMessage(response));
   }
   return response;
 }
@@ -229,6 +229,42 @@ export async function validateToken(
     expires: expires || undefined,
     canWrite: repo.permissions?.push === true,
   };
+}
+
+// `permissions.push` describes the user's role, not necessarily what the
+// token is allowed to do. The only reliable capability check is a write call.
+// This creates an unreferenced blob (no commit and no ref update); GitHub
+// garbage-collects it later.
+export async function verifyWriteAccess(
+  config: AdminRepoConfig,
+  token: string,
+): Promise<WriteAccessResult> {
+  try {
+    await githubJson<GitObjectResponse>(
+      `${repoPath(config)}/git/blobs`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          content: "opencode-admin-write-check",
+          encoding: "utf-8",
+        }),
+      },
+    );
+    return { canWrite: true };
+  } catch (reason) {
+    if (
+      reason instanceof GithubApiError &&
+      (reason.status === 401 || reason.status === 403 || reason.status === 404)
+    ) {
+      return {
+        canWrite: false,
+        status: reason.status,
+        message: reason.message,
+      };
+    }
+    throw reason;
+  }
 }
 
 export async function listPosts(
