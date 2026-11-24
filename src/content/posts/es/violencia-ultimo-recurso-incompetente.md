@@ -4,13 +4,15 @@ description: "Cuando solucionamos el problema equivocado"
 date: 2026-11-24
 lang: es
 category: notes
-tags: ["SciFi", "Life"]
+tags: ["SciFi", "Thinking", "Asimov"]
 featured: false
 ---
 
+![La violencia es el último recurso del incompetente](/covers/asimov.jfif)
+
 "La violencia es el último recurso del incompetente."
 
-Esta frase aparece en la obra de ciencia ficción Fundación, de Isaac Asimov.
+Esta frase aparece en la obra de ciencia ficción *Fundación*, de Isaac Asimov.
 
 Nos dice que cuando pretendes usar la violencia es porque has llegado a tu grado de incompetencia y es la única opción que ves.
 

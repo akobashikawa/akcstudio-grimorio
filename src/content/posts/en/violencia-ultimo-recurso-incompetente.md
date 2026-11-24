@@ -4,13 +4,15 @@ description: "When we solve the wrong problem"
 date: 2026-11-24
 lang: en
 category: notes
-tags: ["SciFi", "Life"]
+tags: ["SciFi", "Thinking", "Asimov"]
 featured: false
 ---
 
+![Violence is the last refuge of the incompetent](/covers/asimov.jfif)
+
 "Violence is the last refuge of the incompetent."
 
-This line appears in Isaac Asimov's science fiction work Foundation.
+This line appears in Isaac Asimov's science fiction work *Foundation*.
 
 It tells us that when you intend to use violence, it is because you have reached the limit of your competence and it is the only option you can see.
 
