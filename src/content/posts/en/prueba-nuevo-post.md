@@ -1,7 +1,8 @@
 ---
 title: "Prueba Nuevo Post"
-description: "Pending description."
+description: "Prueba de Nuevo Post"
 date: "2026-11-24"
+updated: "2026-11-24"
 lang: "en"
 category: "notes"
 tags:
@@ -10,3 +11,7 @@ featured: false
 draft: true
 ---
 
+Esta es una prueba.
+
+## Subtítulo
+Este es un *párrafo* _de prueba_.
