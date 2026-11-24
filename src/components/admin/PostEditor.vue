@@ -14,6 +14,7 @@ import {
   type FrontmatterErrors,
   type PostFrontmatter,
 } from "../../lib/frontmatter";
+import MarkdownPreview from "./MarkdownPreview.vue";
 
 const props = defineProps<{
   repo: AdminRepoConfig;
@@ -48,6 +49,7 @@ const saveError = ref("");
 const conflict = ref(false);
 const savedMessage = ref("");
 const errors = ref<FrontmatterErrors>({});
+const bodyMode = ref<"write" | "preview">("write");
 
 function errorMessage(reason: unknown): string {
   if (reason instanceof GithubApiError) {
@@ -277,15 +279,41 @@ async function save() {
         </label>
       </div>
 
-      <label class="admin-field">
-        <span>Body</span>
+      <div class="admin-body-field">
+        <div class="admin-body-head">
+          <label for="admin-body">Body</label>
+          <div class="admin-body-tabs" role="group" aria-label="Body view">
+            <button
+              type="button"
+              :class="{ active: bodyMode === 'write' }"
+              :aria-pressed="bodyMode === 'write'"
+              @click="bodyMode = 'write'"
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              :class="{ active: bodyMode === 'preview' }"
+              :aria-pressed="bodyMode === 'preview'"
+              @click="bodyMode = 'preview'"
+            >
+              Preview
+            </button>
+          </div>
+        </div>
         <textarea
+          v-if="bodyMode === 'write'"
+          id="admin-body"
           v-model="form.body"
           class="admin-body"
           rows="22"
           spellcheck="true"
         ></textarea>
-      </label>
+        <MarkdownPreview v-else :markdown="form.body" />
+        <small class="admin-field-help">
+          Markdown. Switch to Preview to check the rendered result.
+        </small>
+      </div>
 
       <p v-if="saveError" class="admin-error" role="alert">{{ saveError }}</p>
       <p v-if="savedMessage" class="admin-success" role="status">
@@ -388,6 +416,46 @@ async function save() {
 }
 .admin-field .invalid {
   border-color: #b42318;
+}
+.admin-body-field {
+  display: grid;
+  gap: 6px;
+}
+.admin-body-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-body-head > label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.admin-body-tabs {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+}
+.admin-body-tabs button {
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.admin-body-tabs button + button {
+  border-left: 1px solid var(--line);
+}
+.admin-body-tabs button:hover {
+  color: var(--text);
+}
+.admin-body-tabs button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .admin-body {
   min-height: 360px;
