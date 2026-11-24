@@ -84,6 +84,10 @@ export default defineConfig({
   output: "static",
   trailingSlash: "always",
 
+  // The site is fully prerendered and never touches Astro.session; disabling
+  // sessions avoids an unused Cloudflare KV binding ("SESSION").
+  session: false,
+
   // Preserve the spacing between inline elements when migrating from Astro 5.
   compressHTML: true,
 
@@ -122,6 +126,8 @@ export default defineConfig({
   },
 
   // Prerender with Node instead of workerd: the OG image routes use sharp,
-  // which is a native Node module and cannot run inside workerd.
-  adapter: cloudflare({ prerenderEnvironment: "node" }),
+  // which is a native Node module and cannot run inside workerd. Images are
+  // optimized at build time, so no Cloudflare Images binding is needed at
+  // runtime.
+  adapter: cloudflare({ prerenderEnvironment: "node", imageService: "compile" }),
 });
