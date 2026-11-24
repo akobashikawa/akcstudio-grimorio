@@ -170,6 +170,19 @@ test("Article contents, code blocks, and adjacent posts", async ({
   await expect(page).toHaveURL(new RegExp(`/posts/${adjacent.slug}/$`));
 });
 
+test("Posts without an outline hide the table of contents", async ({
+  page,
+}) => {
+  const withoutOutline = posts.find((post) => post.headings === 0)!;
+  await page.goto(`/posts/${withoutOutline.slug}/`);
+  await expect(page.locator(".toc")).toHaveCount(0);
+  await expect(page.locator(".mobile-toc")).toHaveCount(0);
+
+  await page.goto(`/posts/${writingWithMarkdown.slug}/`);
+  await expect(page.locator(".toc")).toHaveCount(1);
+  await expect(page.locator(".mobile-toc")).toHaveCount(1);
+});
+
 test("Page layouts, assets, and browser errors", async ({ page, isMobile }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));

@@ -37,6 +37,8 @@ const t = useTranslations(lang);
 const personalInfo = getPersonalInfo(lang);
 const postsPath = localizePath(lang, "/posts/");
 const { Content, headings } = await render(post);
+// Only h2/h3 appear in the outline; hide the TOC when a post has no sections.
+const toc = headings.filter((heading) => heading.depth <= 3);
 const posts = (await getPosts(lang)).map(summarize);
 const summary = summarize(post);
 const index = posts.findIndex((item) => item.id === getPostId(post));
@@ -89,18 +91,18 @@ const older = posts[index + 1];
         </div>
         <p>{post.data.description}</p>
       </header>
-      <details class="mobile-toc">
-        <summary>{t("article.toc")}</summary>
-        <ol>
-          {headings
-            .filter((h) => h.depth <= 3)
-            .map((h) => (
+      {toc.length > 0 && (
+        <details class="mobile-toc">
+          <summary>{t("article.toc")}</summary>
+          <ol>
+            {toc.map((h) => (
               <li>
                 <a href={`#${h.slug}`}>{h.text}</a>
               </li>
             ))}
-        </ol>
-      </details>
+          </ol>
+        </details>
+      )}
       <div class="prose" id="article-body">
         <Content />
       </div>
@@ -157,15 +159,14 @@ const older = posts[index + 1];
     </article>
     <aside class="article-sidebar">
       <PersonalCard posts={posts} lang={lang} avatar={await getAvatar(64)} />
-      <nav class="card panel toc" aria-label={t("article.toc")}>
-        <h2 class="panel-title">
-          <span class="icon-[lucide--list]" aria-hidden="true"></span>
-          {t("article.toc")}
-        </h2>
-        <ol>
-          {headings
-            .filter((h) => h.depth <= 3)
-            .map((h, i) => (
+      {toc.length > 0 && (
+        <nav class="card panel toc" aria-label={t("article.toc")}>
+          <h2 class="panel-title">
+            <span class="icon-[lucide--list]" aria-hidden="true"></span>
+            {t("article.toc")}
+          </h2>
+          <ol>
+            {toc.map((h, i) => (
               <li class:list={{ nested: h.depth === 3 }}>
                 <a href={`#${h.slug}`} data-heading={h.slug}>
                   <span>{String(i + 1).padStart(2, "0")}</span>
@@ -173,8 +174,9 @@ const older = posts[index + 1];
                 </a>
               </li>
             ))}
-        </ol>
-      </nav>
+          </ol>
+        </nav>
+      )}
     </aside>
   </div>
   <script>
