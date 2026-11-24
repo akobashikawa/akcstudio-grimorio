@@ -8,7 +8,7 @@ category: "notes"
 tags:
   - "Test"
 featured: false
-draft: true
+draft: false
 ---
 
 Esta es una prueba.
