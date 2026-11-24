@@ -70,10 +70,10 @@ public/               Favicons, fonts, static SVGs
 
 The site has two content sources, each with its own format and publishing flow:
 
-| Type         | Format                 | Where                                            | Publishing flow                                                                                         |
-| ------------ | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| **Posts**    | Markdown collection    | `src/content/posts/en/`, `src/content/posts/es/` | Scaffold with `pnpm new-post`, edit the frontmatter and body, set `draft: false`, then build and deploy |
-| **Projects** | Typed TypeScript array | `src/data/projects.ts`                           | Add or edit an object in `getProjects()`, then build and deploy                                         |
+| Type         | Format                 | Where                                            | Publishing flow                                                                                                                  |
+| ------------ | ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Posts**    | Markdown collection    | `src/content/posts/en/`, `src/content/posts/es/` | Scaffold with `pnpm new-post` or create from `/admin/`, edit the frontmatter and body, set `draft: false`, then build and deploy |
+| **Projects** | Typed TypeScript array | `src/data/projects.ts`                           | Add or edit an object in `getProjects()`, then build and deploy                                                                  |
 
 Only posts go through Astro's content collections and schema validation. Projects are a plain data module, so they have no drafts, dates, or pairing rules. Everything else (site name, navigation, UI copy, theme colors) is configuration rather than content; see [Make it yours](#make-it-yours).
 
@@ -122,6 +122,27 @@ updated: 2026-10-01 # optional: last-reviewed date, used in the sitemap
 `pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: every post must have a counterpart in the other language, and its `lang` must match the folder.
 
 The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work. For diagrams, drop an SVG in `public/` and reference it with a `<figure class="diagram">`.
+
+### Editing posts from `/admin/`
+
+The site includes a browser editor at `/admin/`. It is not linked from the public navigation and is marked `noindex`.
+
+1. Open `/admin/`.
+2. Create a GitHub fine-grained personal access token with **Contents: Read and write** access to this repository. The token creation link prefills the name, a 90-day expiration and the Contents permission.
+3. Under **Repository access**, choose **Only select repositories** and select this repository. GitHub cannot preselect that step from the link.
+4. Paste the token into the admin page. It is stored only in this browser's `localStorage` and is sent only to `api.github.com`.
+
+The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, show a preview, create both language files in one commit, and save directly to `master`. A save triggers the normal deploy workflow.
+
+Limitations:
+
+- There is no image upload. Reference files that already exist under `public/`.
+- Posts cannot be deleted or renamed, and the slug is fixed after creation.
+- The preview is approximate and does not render Astro-specific components or directives.
+- The interface is English-only.
+- The token lives in the browser. Use a short expiration, grant access only to this repository, and revoke the token from GitHub if it is exposed.
+
+The admin still produces ordinary Markdown files, so `pnpm check` validates pairing and frontmatter during the deploy build.
 
 ### Adding a project
 
