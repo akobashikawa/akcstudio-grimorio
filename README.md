@@ -8,7 +8,7 @@ A fast, bilingual blog theme for Astro, built for writing of any kind: guides, n
 
 **[Live site](https://akcstudio-grimorio.akobashikawa.workers.dev)** · built with [Astro](https://astro.build), [Vue](https://vuejs.org) and [Tailwind CSS](https://tailwindcss.com).
 
-> Grimorio ships with example posts and copy so you can see every feature working. Replace them with your own — see [Make it yours](#make-it-yours).
+> Grimorio ships with example posts, projects, and copy so you can see every feature working. Replace them with your own — see [Make it yours](#make-it-yours).
 
 ## Features
 
@@ -66,6 +66,17 @@ src/
 public/               Favicons, fonts, static SVGs
 ```
 
+## Content types
+
+The site has two content sources, each with its own format and publishing flow:
+
+| Type         | Format                 | Where                                            | Publishing flow                                                                                         |
+| ------------ | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Posts**    | Markdown collection    | `src/content/posts/en/`, `src/content/posts/es/` | Scaffold with `pnpm new-post`, edit the frontmatter and body, set `draft: false`, then build and deploy |
+| **Projects** | Typed TypeScript array | `src/data/projects.ts`                           | Add or edit an object in `getProjects()`, then build and deploy                                         |
+
+Only posts go through Astro's content collections and schema validation. Projects are a plain data module, so they have no drafts, dates, or pairing rules. Everything else (site name, navigation, UI copy, theme colors) is configuration rather than content; see [Make it yours](#make-it-yours).
+
 ## Make it yours
 
 Everything you'll normally touch lives in a handful of files:
@@ -111,6 +122,41 @@ updated: 2026-10-01 # optional: last-reviewed date, used in the sitemap
 `pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: every post must have a counterpart in the other language, and its `lang` must match the folder.
 
 The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work. For diagrams, drop an SVG in `public/` and reference it with a `<figure class="diagram">`.
+
+### Adding a project
+
+Projects are listed from a typed array in `src/data/projects.ts`; there is no Markdown file or CMS. Add an object to the array returned by `getProjects()`:
+
+```ts
+{
+  name: "My project",
+  description: es
+    ? "Qué hace y por qué es interesante."
+    : "What it does and why it is interesting.",
+  url: "https://github.com/you/my-project",
+  icon: "icon-[lucide--code-2]",
+  tech: ["Astro", "Cloudflare"],
+  status: es ? "En producción" : "Live",
+}
+```
+
+- `description` and `status` carry one value per language, picked with the `es` flag.
+- `url` opens in a new tab, so it works for repositories, demos, or store listings.
+- `icon` is an Iconify class; the `lucide` and `simple-icons` sets are installed.
+- `tech` renders as small pills under the description.
+- The order in the array is the order of the cards (two columns on desktop, one on mobile).
+- The page is served at `/projects/` and `/es/projects/`. Its copy lives in the `projects.*` keys of `src/i18n/*.json`, and the navigation entry in `src/site.config.json`.
+- There is no draft flag or date: a project shows up on the next build.
+
+### Publishing content
+
+Both content types are baked in at build time, so publishing means building and deploying:
+
+1. `pnpm dev` to preview the change locally.
+2. `pnpm check` (also part of `pnpm build`) to validate types, post pairing, and frontmatter.
+3. Commit and push to `master` for the deploy workflow, or run `pnpm run deploy` locally.
+
+Only posts with `draft: false` are included in the build; projects have no draft state and ship on the next build.
 
 ### Renaming categories
 
