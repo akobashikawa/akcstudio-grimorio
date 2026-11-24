@@ -10,6 +10,7 @@ import {
 import { render } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import PersonalCard from "../../../components/home/PersonalCard.vue";
+import EditPostButton from "../../../components/admin/EditPostButton.vue";
 import { countWords, getPosts, summarize, getPostId } from "../../../lib/posts";
 import { categoryLabel } from "../../../data/post-options";
 import { getPersonalInfo } from "../../../config";
@@ -117,10 +118,13 @@ const older = posts[index + 1];
             </a>
           ))}
         </div>
-        <button id="share-post" class="btn secondary">
-          <span class="icon-[lucide--link]" aria-hidden="true"></span>
-          {t("article.share")}
-        </button>
+        <div class="article-actions">
+          <EditPostButton client:idle lang={lang} slug={getPostId(post)} />
+          <button id="share-post" class="btn secondary">
+            <span class="icon-[lucide--link]" aria-hidden="true"></span>
+            {t("article.share")}
+          </button>
+        </div>
       </div>
       <p id="share-status" role="status" class="share-status"></p>
       <div class="author-note">
@@ -356,6 +360,12 @@ const older = posts[index + 1];
   .article-tools .btn {
     font-size: 14px;
     padding: 6px 12px;
+  }
+  .article-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
   }
   .article-tags {
     display: flex;

@@ -11,4 +11,3 @@ featured: true
 Este es un lugar donde reuno notas que he publicado. Sobre programación y temas diversos como ciencia, historias, desarrollo personal y tarot.
 
 ![Un escritorio ordenado junto a una ventana](/covers/welcome.webp)
-

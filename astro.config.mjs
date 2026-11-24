@@ -107,9 +107,14 @@ export default defineConfig({
       // Link each page to its translation for search engines.
       i18n: { defaultLocale: "en", locales: { es: "es-ES", en: "en-US" } },
       filter: (page) =>
-        !["/404/", "/404.html", "/es/404/", "/es/404.html"].includes(
-          new URL(page).pathname,
-        ),
+        ![
+          "/404/",
+          "/404.html",
+          "/es/404/",
+          "/es/404.html",
+          "/admin/",
+          "/admin",
+        ].includes(new URL(page).pathname),
       serialize(item) {
         const path = new URL(item.url).pathname;
         const listing = /^\/(es\/)?(posts\/)?$/.exec(path);
@@ -129,5 +134,8 @@ export default defineConfig({
   // which is a native Node module and cannot run inside workerd. Images are
   // optimized at build time, so no Cloudflare Images binding is needed at
   // runtime.
-  adapter: cloudflare({ prerenderEnvironment: "node", imageService: "compile" }),
+  adapter: cloudflare({
+    prerenderEnvironment: "node",
+    imageService: "compile",
+  }),
 });
