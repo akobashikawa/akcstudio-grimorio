@@ -12,7 +12,7 @@ featured: false
 
 "Violence is the last refuge of the incompetent."
 
-This line appears in Isaac Asimov's science fiction work *Foundation*.
+This line appears in Isaac Asimov's science fiction work _Foundation_.
 
 It tells us that when you intend to use violence, it is because you have reached the limit of your competence and it is the only option you can see.
 

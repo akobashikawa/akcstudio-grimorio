@@ -11,4 +11,3 @@ featured: true
 This is a place where I gather notes I have published. Covering programming as well as various other topics such as science, stories, personal development, and tarot.
 
 ![A tidy desk next to a window](/covers/welcome.webp)
-
