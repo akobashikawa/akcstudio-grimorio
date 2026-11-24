@@ -59,6 +59,7 @@ onMounted(async () => {
     storeSession(next);
     session.value = next;
     await loadPosts();
+    openFromQuery();
   } catch (reason) {
     clearStoredSession();
     loginError.value =
@@ -106,6 +107,7 @@ async function onAuthenticated(next: AdminSession) {
   view.value = "list";
   selectedPost.value = null;
   await loadPosts();
+  openFromQuery();
 }
 
 function logout() {
@@ -116,21 +118,25 @@ function logout() {
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "";
+  updateQuery();
 }
 
 function editPost(post: PostSummary) {
   selectedPost.value = post;
   view.value = "edit";
+  updateQuery(post);
 }
 
 function startCreate() {
   selectedPost.value = null;
   view.value = "new";
+  updateQuery();
 }
 
 function backToList() {
   view.value = "list";
   selectedPost.value = null;
+  updateQuery();
 }
 
 function onPostSaved(updated: PostSummary) {
@@ -149,8 +155,10 @@ async function onPostCreated(result: CreatePostResult) {
   if (created) {
     selectedPost.value = created;
     view.value = "edit";
+    updateQuery(created);
   } else {
     view.value = "list";
+    updateQuery();
   }
 }
 
@@ -162,6 +170,41 @@ function onUnauthorized() {
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "Your GitHub token expired. Connect again.";
+  updateQuery();
+}
+
+function updateQuery(post?: PostSummary) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (post) {
+    url.searchParams.set("lang", post.lang);
+    url.searchParams.set("slug", post.slug);
+  } else {
+    url.searchParams.delete("lang");
+    url.searchParams.delete("slug");
+  }
+  window.history.replaceState(null, "", url.href);
+}
+
+function openFromQuery() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get("lang");
+  const slug = params.get("slug");
+  if (!lang || !slug) return;
+  if (lang !== "en" && lang !== "es") {
+    updateQuery();
+    return;
+  }
+  const post = posts.value.find(
+    (candidate) => candidate.lang === lang && candidate.slug === slug,
+  );
+  if (!post) {
+    updateQuery();
+    return;
+  }
+  selectedPost.value = post;
+  view.value = "edit";
 }
 
 function formatExpiration(value?: string): string {
