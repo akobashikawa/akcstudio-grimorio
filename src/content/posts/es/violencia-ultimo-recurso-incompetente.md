@@ -1,9 +1,11 @@
 ---
 title: "La violencia es el último recurso del incompetente"
-description: ""
+description: "Cuando solucionamos el problema equivocado"
 date: 2026-11-24
-type: notes
-tags: ["Life"]
+lang: es
+category: notes
+tags: ["SciFi", "Life"]
+featured: false
 ---
 
 "La violencia es el último recurso del incompetente."
