@@ -1,11 +1,16 @@
 ---
 title: "La violencia es el último recurso del incompetente"
 description: "Cuando solucionamos el problema equivocado"
-date: 2026-11-24
-lang: es
-category: notes
-tags: ["SciFi", "Thinking", "Asimov"]
+date: "2026-11-24"
+updated: "2026-11-24"
+lang: "es"
+category: "notes"
+tags:
+  - "SciFi"
+  - "Thinking"
+  - "Asimov"
 featured: false
+draft: false
 ---
 
 ![La violencia es el último recurso del incompetente](/covers/asimov.jfif)
@@ -31,4 +36,4 @@ Así, te esfuerzas en este otro problema que te inventaste para creer, o hacer c
 Pero es el problema equivocado.
 
 Si usaste la violencia, eres incompetente para el problema verdadero.
-Tarde o temprano tendrás que resolverlo de verdad.
+Tarde o temprano tendrás que resolverlo de verdad...
