@@ -12,8 +12,10 @@ import {
   listPosts,
   validateToken,
   type AdminSession,
+  type CreatePostResult,
   type PostSummary,
 } from "../../lib/github-content";
+import PostCreator from "./PostCreator.vue";
 import PostEditor from "./PostEditor.vue";
 import PostList from "./PostList.vue";
 import TokenLogin from "./TokenLogin.vue";
@@ -138,6 +140,20 @@ function onPostSaved(updated: PostSummary) {
   );
 }
 
+async function onPostCreated(result: CreatePostResult) {
+  await loadPosts();
+  const created =
+    posts.value.find(
+      (post) => post.lang === "en" && post.slug === result.slug,
+    ) ?? posts.value.find((post) => post.slug === result.slug);
+  if (created) {
+    selectedPost.value = created;
+    view.value = "edit";
+  } else {
+    view.value = "list";
+  }
+}
+
 function onUnauthorized() {
   clearStoredSession();
   session.value = null;
@@ -206,11 +222,20 @@ function formatExpiration(value?: string): string {
         @back="backToList"
         @unauthorized="onUnauthorized"
       />
+      <PostCreator
+        v-else-if="view === 'new'"
+        :repo="repo"
+        :token="session.token"
+        :categories="categories"
+        @created="onPostCreated"
+        @back="backToList"
+        @unauthorized="onUnauthorized"
+      />
       <section v-else class="admin-view">
         <button class="btn secondary" type="button" @click="backToList">
           ← Back to posts
         </button>
-        <p>Create a new post. The form arrives in Step 8.</p>
+        <p>Choose a post from the list.</p>
       </section>
     </template>
   </div>
