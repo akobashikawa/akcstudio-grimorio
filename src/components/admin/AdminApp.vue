@@ -14,6 +14,7 @@ import {
   type AdminSession,
   type PostSummary,
 } from "../../lib/github-content";
+import PostEditor from "./PostEditor.vue";
 import PostList from "./PostList.vue";
 import TokenLogin from "./TokenLogin.vue";
 
@@ -130,6 +131,23 @@ function backToList() {
   selectedPost.value = null;
 }
 
+function onPostSaved(updated: PostSummary) {
+  selectedPost.value = updated;
+  posts.value = posts.value.map((post) =>
+    post.lang === updated.lang && post.slug === updated.slug ? updated : post,
+  );
+}
+
+function onUnauthorized() {
+  clearStoredSession();
+  session.value = null;
+  posts.value = [];
+  postsError.value = "";
+  view.value = "list";
+  selectedPost.value = null;
+  loginError.value = "Your GitHub token expired. Connect again.";
+}
+
 function formatExpiration(value?: string): string {
   if (!value) return "";
   const date = new Date(value);
@@ -177,16 +195,22 @@ function formatExpiration(value?: string): string {
         @create="startCreate"
         @refresh="loadPosts"
       />
+      <PostEditor
+        v-else-if="view === 'edit' && selectedPost"
+        :key="`${selectedPost.lang}/${selectedPost.slug}`"
+        :repo="repo"
+        :token="session.token"
+        :post="selectedPost"
+        :categories="categories"
+        @saved="onPostSaved"
+        @back="backToList"
+        @unauthorized="onUnauthorized"
+      />
       <section v-else class="admin-view">
         <button class="btn secondary" type="button" @click="backToList">
           ← Back to posts
         </button>
-        <p v-if="view === 'edit'">
-          Editing
-          <code>{{ selectedPost?.lang }}/{{ selectedPost?.slug }}</code>. The
-          editor arrives in Step 7.
-        </p>
-        <p v-else>Create a new post. The form arrives in Step 8.</p>
+        <p>Create a new post. The form arrives in Step 8.</p>
       </section>
     </template>
   </div>
