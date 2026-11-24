@@ -9,10 +9,15 @@ import {
 } from "../../lib/admin-session";
 import {
   GithubApiError,
+  listPosts,
   validateToken,
   type AdminSession,
+  type PostSummary,
 } from "../../lib/github-content";
+import PostList from "./PostList.vue";
 import TokenLogin from "./TokenLogin.vue";
+
+type AdminView = "list" | "edit" | "new";
 
 const props = defineProps<{
   repo: AdminRepoConfig;
@@ -22,6 +27,11 @@ const props = defineProps<{
 const session = ref<AdminSession | null>(null);
 const checking = ref(true);
 const loginError = ref("");
+const posts = ref<PostSummary[]>([]);
+const loadingPosts = ref(false);
+const postsError = ref("");
+const view = ref<AdminView>("list");
+const selectedPost = ref<PostSummary | null>(null);
 
 onMounted(async () => {
   const stored = loadStoredSession();
@@ -45,6 +55,7 @@ onMounted(async () => {
     };
     storeSession(next);
     session.value = next;
+    await loadPosts();
   } catch (reason) {
     clearStoredSession();
     loginError.value =
@@ -58,15 +69,65 @@ onMounted(async () => {
   }
 });
 
-function onAuthenticated(next: AdminSession) {
+async function loadPosts() {
+  const current = session.value;
+  if (!current) return;
+
+  loadingPosts.value = true;
+  postsError.value = "";
+  try {
+    const [en, es] = await Promise.all([
+      listPosts(props.repo, current.token, "en"),
+      listPosts(props.repo, current.token, "es"),
+    ]);
+    posts.value = [...en, ...es].sort(
+      (a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title),
+    );
+  } catch (reason) {
+    if (reason instanceof GithubApiError && reason.status === 401) {
+      clearStoredSession();
+      session.value = null;
+      loginError.value = "Your GitHub token expired. Connect again.";
+    } else {
+      postsError.value =
+        reason instanceof Error ? reason.message : "Could not load posts.";
+    }
+  } finally {
+    loadingPosts.value = false;
+  }
+}
+
+async function onAuthenticated(next: AdminSession) {
   session.value = next;
   loginError.value = "";
+  view.value = "list";
+  selectedPost.value = null;
+  await loadPosts();
 }
 
 function logout() {
   clearStoredSession();
   session.value = null;
+  posts.value = [];
+  postsError.value = "";
+  view.value = "list";
+  selectedPost.value = null;
   loginError.value = "";
+}
+
+function editPost(post: PostSummary) {
+  selectedPost.value = post;
+  view.value = "edit";
+}
+
+function startCreate() {
+  selectedPost.value = null;
+  view.value = "new";
+}
+
+function backToList() {
+  view.value = "list";
+  selectedPost.value = null;
 }
 
 function formatExpiration(value?: string): string {
@@ -106,12 +167,28 @@ function formatExpiration(value?: string): string {
       :initial-error="loginError"
       @authenticated="onAuthenticated"
     />
-    <section v-else class="admin-placeholder">
-      <p>
-        Connected to <code>{{ repo.owner }}/{{ repo.repo }}</code
-        >. The post list arrives in the next step.
-      </p>
-    </section>
+    <template v-else>
+      <PostList
+        v-if="view === 'list'"
+        :posts="posts"
+        :loading="loadingPosts"
+        :error="postsError"
+        @edit="editPost"
+        @create="startCreate"
+        @refresh="loadPosts"
+      />
+      <section v-else class="admin-view">
+        <button class="btn secondary" type="button" @click="backToList">
+          ← Back to posts
+        </button>
+        <p v-if="view === 'edit'">
+          Editing
+          <code>{{ selectedPost?.lang }}/{{ selectedPost?.slug }}</code>. The
+          editor arrives in Step 7.
+        </p>
+        <p v-else>Create a new post. The form arrives in Step 8.</p>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -164,7 +241,10 @@ function formatExpiration(value?: string): string {
   color: var(--muted);
   font-size: 13px;
 }
-.admin-placeholder {
+.admin-view {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
   padding: 18px 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -172,7 +252,11 @@ function formatExpiration(value?: string): string {
   color: var(--muted);
   font-size: 14px;
 }
-.admin-placeholder p {
+.admin-view p {
   margin: 0;
+}
+.admin-view .btn {
+  font-size: 13px;
+  padding: 5px 11px;
 }
 </style>
