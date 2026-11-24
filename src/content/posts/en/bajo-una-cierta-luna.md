@@ -10,129 +10,129 @@ featured: false
 
 ![Bajo una cierta luna](/covers/apolo11-amarizaje.jpg)
 
-I hear the sound of my breathing. With my eyes closed, I try to focus on the only thing whose control seems within my reach. I think of nothing… nothing, and my emotions surface. My hand begins to tremble. Tears seep out from under my eyelids.
+I listen to the sound of my own breathing. Eyes closed, I try to hold on to the one thing that still seems to be within my power. I think of nothing… nothing at all, and my feelings rise to the surface. My hand begins to shake. Tears slip out from under my eyelids.
 
-I think of nothing… nothing, and the echo of footsteps in the hospital corridor becomes a sound without meaning. I free my mind from words and let it be whatever it has to be.
+I think of nothing… nothing, and the echo of footsteps in the hospital corridor dissolves into sound without meaning. I let go of words, and let come what will.
 
-The image comes of the glare of the sun when they opened the capsule. The sea was so blue. The sky, pale…
+Then the light returns: the glare of the sun when they opened the hatch. The sea so blue. The sky pale…
 
-Now I go back to before we began to fall, when we were orbiting and I was trying to spot the Earth through the window… so blue, so beautiful…
+Now I drift back to before the fall, to when we were still in orbit and I strained to find the Earth in the window… so blue, so beautiful…
 
-I feel the cold again… a mist formed on the glass, then cleared… everything seems so still… suddenly there it is, our reflection over the atmosphere, as if we were a pebble about to touch the surface of a pond, it almost looks like another module… we draw closer… we and our reflection crossing… we feel the jolt that marks the start of the fall…
+The cold comes back to me… a film of mist forming on the glass, then clearing… everything so still… and suddenly there it is, our reflection hanging over the atmosphere, like a pebble about to touch the surface of a pond, almost another module… we draw closer… we and our reflection crossing… and then the jolt that marks the beginning of the fall…
 
-"Commander…" a voice brings me back, "are you feeling all right?"
+"Commander…" a voice calls me back. "Are you feeling all right?"
 
-The nurse looks a little worried. It must be the tears.
+The nurse looks worried. Probably the tears.
 
 "I'm fine."
 
-"I'm going to take you to Dr. Demps."
+"I'm going to take you in to see Dr. Demps."
 
-"OK, let's go."
+"Okay. Let's go."
 
-We walk slowly. She pushes my chair while I watch the floor tiles go by, one by one. We arrive. The door closes and the three of us are alone in a sort of examination room. Of course there are more people behind the mirror next door. That's normal. What isn't normal is that they call the doctor Demps. I worked with him during the preparation. I don't remember his name well, but it definitely isn't Demps.
+We move slowly. She pushes my chair while I watch the floor tiles slide past, one by one. We arrive. The door shuts and the three of us are alone in what passes for an examining room. Of course there are more people behind the mirror next door. That's normal. What isn't normal is that they call the doctor Demps. I worked with him during training. His real name escapes me, but it definitely isn't Demps.
 
 "How are you feeling, Commander?"
 
-"Better, though I'm still a little confused. Have you managed to find out what happened?"
+"Better, though I'm still a little muddled. Have you been able to find out what happened?"
 
-"Well," the doctor says, smiling, "some of the astronauts from earlier missions also went through a period of confusion. Even when you're highly trained, the stress you've been under is extraordinary, and I think it's normal for the body, and the mind, to feel it."
+"Well," the doctor says with a smile, "some of the men from earlier missions went through a period of confusion too. However well trained you are, the strain you've been under is extraordinary, and it's only natural that the body, and the mind, should feel it."
 
 "But what about this business with the names?"
 
-"It will become clear, Commander," he answers, still smiling. "Everything will become clear."
+"It'll sort itself out, Commander," he answers, smiling still. "Everything will sort itself out."
 
-The routine of exams goes on. The cold of the stethoscope, the lights in my eyes, the pressure on my arm, the blood samples… it feels strange not to recognize the name they write on each tube, even though it's supposed to be yours.
+The examinations go on, one after another. The cold of the stethoscope, the lights in my eyes, the pressure on my arm, the blood samples… it is strange not to recognize the name they write on every vial, even though it is supposed to be your own.
 
-A similar bewilderment seemed to strike the sergeant who received us on the raft when we splashed down. He kept staring at the names embroidered on our suits.
+The sergeant who met us on the raft after splashdown seemed to feel the same bewilderment. He couldn't stop staring at the names stitched on our suits.
 
-There was a quarantine protocol we were supposed to follow after returning. None of it has gone the way I expected. I haven't seen my companions since we took off our suits. Dr. Demps, as they call him, is the first familiar face I've seen again.
+There was a quarantine protocol we were meant to follow after returning. None of it has gone the way I expected. I haven't seen my crewmates since we took off our suits. Dr. Demps, as they call him, is the first familiar face I've seen since.
 
 "Now Betty will take you to Major Jordan."
 
-I nod. This time, the nurse wheels me a little faster.
+I nod. This time the nurse wheels me a little faster.
 
-The doors open and I see my friends. Each one in a wheelchair, like me. Almost without thinking, I stand up. I'm a little weak and I wobble, but it feels good to see them again and shake their hands once more. We hug. We came back alive.
+The doors open and I see my friends. Each in a wheelchair, like me. Almost without thinking, I get to my feet. I'm weak, and I sway, but it feels good to see them again, to grip their hands once more. We embrace. We came back alive.
 
-The major approaches and greets me. As with the doctor, his name slips away from me, the way a dream does when it fades, but it isn't anything like Jordan either.
+The major comes forward and greets me. As with the doctor, his name slips from my grasp, the way a dream does on waking, but it isn't anything like Jordan either.
 
-"Now that the three of you are together, allow me to congratulate you personally on your extraordinary work and the success of the mission. Later, the general and those in charge of the mission will give you your official commendations."
+"Now that the three of you are together, allow me to congratulate you personally on your extraordinary work and on the success of the mission. Later on, the general and the mission directors will present you with your official commendations."
 
-We smile at that and thank him for the gesture. Still, there is something I have to say.
+We smile at that and thank him for his kindness. Still, there is something I have to say.
 
-"Well, we tried, Major. I hope the data we've gathered helps the next crews actually make it."
+"Well, we gave it our best, Major. I hope the data we brought back helps the next crew make it."
 
 The major smiles.
 
-"Commander, you're the first man to walk on the Moon! I'd say that was an excellent attempt."
+"Commander, you're the first man to walk on the Moon! I'd call that one heck of an attempt."
 
-I look at my friends. It's strange when you don't find in their faces the expression you'd expect to see. They seem to agree. Or I'm losing my mind.
+I look at my friends. It is strange, searching their faces for an expression that isn't there. They seem to agree with him. Or else I am losing my mind.
 
-I decide to go along with it and find out later what's happening.
+I decide to play along and find out later what is going on.
 
-"Enough of the modesty, Commander," my pilot says, winking at me.
+"Quit being so modest, Commander," my pilot says, winking at me.
 
-I smile and do my best to keep up the act for the rest of the meeting.
+I smile and do what I can to hide my unease for the rest of the meeting.
 
-"Well, gentlemen, we're in agreement. I'm informing you that the quarantine will end in a couple of days at most. You'll be able to go home soon."
+"Well, gentlemen, I think we're all in agreement. The quarantine will be over in a couple of days, at most. You'll be heading home soon."
 
-Later, the three of us alone, I ask them what's going on.
+Later, the three of us alone, I ask them what is going on.
 
-"Nothing, Commander," the pilot tells me. "Everything's fine."
+"Nothing, Commander," the pilot says. "Everything's fine."
 
 "Are you kidding? Do you know who you are?"
 
-"I'm Colonel Samuel Thomas, pilot of the Artemis 11 mission, which successfully took the first man to the Moon…"
+"Colonel Samuel Thomas, pilot of the Artemis 11 mission, which put the first man on the Moon…"
 
-"Good God… that's not your name, Buzz!"
+"Good Lord… that's not your name, Buzz!"
 
-"They're just names… everything else is the same."
+"They're only names… everything else is the same."
 
 I can't believe what I'm hearing. He knows it didn't happen that way.
 
-"Don't you remember that we made the approach, we orbited, and the decision was made to return? We never landed."
+"Don't you remember? We made our approach, we went into orbit, and the call was made to return. We never landed."
 
-"Looks like it happened in another universe."
+"Sounds to me like it happened in some other universe."
 
-I look, intrigued, at Mike, the second pilot, who until now has stayed apart from our conversation.
+I turn to Mike, the second pilot, who has kept out of the conversation until now.
 
-"I think that's what best explains what's happening to us."
+"I think that's about the best explanation we've got for what's happening to us."
 
-"Explain it to me, please."
+"Go on, explain it to me."
 
-"In quantum physics, when something is very small, like a subatomic particle, it seems to be here and also there, at the same time. Most scientists explain it as probabilistic phenomena and other things I don't really understand. But for others, it's that at that scale it becomes easier to glimpse a parallel reality."
+"In quantum physics, when something gets very small, like a subatomic particle, it seems to be here and there at the same time. Most scientists chalk it up to probability, and a lot of other things I don't really understand. But some say that at that scale it gets easier to catch a glimpse of a parallel reality."
 
 "But we're not tiny electrons."
 
-"No, but maybe something similar happens at high speeds, like the ones we reached on the trip."
+"No, but maybe something like it happens at very high speeds, like the ones we reached on the trip."
 
-"Are you saying there's another, alternate reality where they also want to reach the Moon?"
+"You're saying there's some other reality where they're trying to get to the Moon too?"
 
-"Actually, there would be infinite alternate realities, each as valid as the next. Every decision you make, whether you turn right instead of left, is just the option you see in the reality you're in. In the others, you may have decided something else. I think there are many missions like ours. In some we arrive and in others we don't. I don't know. Apparently, in this one we made it… although our names aren't the same."
+"Actually, there'd be an infinite number of them, each as valid as the next. Every decision you make, turning right instead of left, is just the option you happen to see in the reality you're in. In the others, you might have chosen differently. I figure there are a lot of missions like ours. In some we make it, and in some we don't. I don't know. Apparently in this one we did… only our names aren't the same."
 
-"Not even similar. Samuel?" I say, looking at the pilot.
+"Not even close. Samuel?" I say, looking at the pilot.
 
-"Or we're out of our minds," he replies, facing me. "What options do we have?"
+"Or else we're out of our minds," he replies, facing me. "What choice do we have?"
 
-"But we can't spend our whole lives lying," I insist. "We have to find out what happened."
+"We can't spend our whole lives lying," I insist. "We have to find out what happened."
 
-"It won't be an absolute lie. Don't think they don't know. Of course they've seen our uniforms, with our names embroidered on them. They'll have taken apart and examined every component of the module to see if they find other names that don't exist for them. Thank God our faces are the same, but I bet some of them are wondering whether there's a Russian plan behind it, or something like that. Thank God they need us. Let's buy time to find out what happened."
+"It won't be a complete lie. And don't think they don't know. Of course they've seen our uniforms, our names stitched on them. They've taken that module apart piece by piece, looking for names that don't exist for them. Thank God our faces are the same, but I'll bet some of them are wondering if there's a Russian scheme behind all this, or something along those lines. Thank God they need us. Let's buy some time and figure out what happened."
 
 "I don't know."
 
-"In the meantime, the official version is that we're confused. If something seems out of place, they won't bother you much while you get used to it."
+"For now, the official story is that we're confused. If something looks out of place, they won't bother you much while you get used to it."
 
-It's hard to digest. I'm left alone, thinking.
+It is a lot to take in. I'm left alone with my thoughts.
 
 After a while, the pilot hands me some photographs.
 
-"I asked the nurse for a favor. They're of your family. If it's any consolation, they look like the people I remember."
+"I asked the nurse for a favor. They're your family. If it's any comfort, they look just like the people I remember."
 
 "Thanks."
 
-Yes, they're the same faces. Maybe, as Buzz says, it's only a matter of names.
+Yes, the same faces. Perhaps, as Buzz says, it's only a matter of names.
 
-I put the photos down and walk to the window. I remember when I saw the reflection of the capsule on reentry. It must have been then that we switched places. It wasn't a reflection: the flag wasn't reversed.
+I put the photographs down and go to the window. I remember the reflection of the capsule on reentry. It must have been then that we changed places. It wasn't a reflection: the flag was not reversed.
 
 "What are you thinking, Neil?"
 
