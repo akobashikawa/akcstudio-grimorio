@@ -10,6 +10,7 @@ import {
 import { render } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import PersonalCard from "../../../components/home/PersonalCard.vue";
+import EditPostButton from "../../../components/admin/EditPostButton.vue";
 import { countWords, getPosts, summarize, getPostId } from "../../../lib/posts";
 import { categoryLabel } from "../../../data/post-options";
 import { getPersonalInfo } from "../../../config";
@@ -37,6 +38,8 @@ const t = useTranslations(lang);
 const personalInfo = getPersonalInfo(lang);
 const postsPath = localizePath(lang, "/posts/");
 const { Content, headings } = await render(post);
+// Only h2/h3 appear in the outline; hide the TOC when a post has no sections.
+const toc = headings.filter((heading) => heading.depth <= 3);
 const posts = (await getPosts(lang)).map(summarize);
 const summary = summarize(post);
 const index = posts.findIndex((item) => item.id === getPostId(post));
@@ -89,18 +92,18 @@ const older = posts[index + 1];
         </div>
         <p>{post.data.description}</p>
       </header>
-      <details class="mobile-toc">
-        <summary>{t("article.toc")}</summary>
-        <ol>
-          {headings
-            .filter((h) => h.depth <= 3)
-            .map((h) => (
+      {toc.length > 0 && (
+        <details class="mobile-toc">
+          <summary>{t("article.toc")}</summary>
+          <ol>
+            {toc.map((h) => (
               <li>
                 <a href={`#${h.slug}`}>{h.text}</a>
               </li>
             ))}
-        </ol>
-      </details>
+          </ol>
+        </details>
+      )}
       <div class="prose" id="article-body">
         <Content />
       </div>
@@ -115,10 +118,13 @@ const older = posts[index + 1];
             </a>
           ))}
         </div>
-        <button id="share-post" class="btn secondary">
-          <span class="icon-[lucide--link]" aria-hidden="true"></span>
-          {t("article.share")}
-        </button>
+        <div class="article-actions">
+          <EditPostButton client:idle lang={lang} slug={getPostId(post)} />
+          <button id="share-post" class="btn secondary">
+            <span class="icon-[lucide--link]" aria-hidden="true"></span>
+            {t("article.share")}
+          </button>
+        </div>
       </div>
       <p id="share-status" role="status" class="share-status"></p>
       <div class="author-note">
@@ -157,15 +163,14 @@ const older = posts[index + 1];
     </article>
     <aside class="article-sidebar">
       <PersonalCard posts={posts} lang={lang} avatar={await getAvatar(64)} />
-      <nav class="card panel toc" aria-label={t("article.toc")}>
-        <h2 class="panel-title">
-          <span class="icon-[lucide--list]" aria-hidden="true"></span>
-          {t("article.toc")}
-        </h2>
-        <ol>
-          {headings
-            .filter((h) => h.depth <= 3)
-            .map((h, i) => (
+      {toc.length > 0 && (
+        <nav class="card panel toc" aria-label={t("article.toc")}>
+          <h2 class="panel-title">
+            <span class="icon-[lucide--list]" aria-hidden="true"></span>
+            {t("article.toc")}
+          </h2>
+          <ol>
+            {toc.map((h, i) => (
               <li class:list={{ nested: h.depth === 3 }}>
                 <a href={`#${h.slug}`} data-heading={h.slug}>
                   <span>{String(i + 1).padStart(2, "0")}</span>
@@ -173,8 +178,9 @@ const older = posts[index + 1];
                 </a>
               </li>
             ))}
-        </ol>
-      </nav>
+          </ol>
+        </nav>
+      )}
     </aside>
   </div>
   <script>
@@ -291,6 +297,7 @@ const older = posts[index + 1];
     font-size: 17px;
     line-height: 1.65;
     margin: 18px 0 24px;
+    font-style: italic;
   }
   .article-sidebar {
     display: flex;
@@ -353,6 +360,12 @@ const older = posts[index + 1];
   .article-tools .btn {
     font-size: 14px;
     padding: 6px 12px;
+  }
+  .article-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
   }
   .article-tags {
     display: flex;

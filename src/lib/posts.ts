@@ -1,6 +1,6 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import { categoryNames } from "../data/post-options";
-import type { Language } from "../i18n";
+import { languages, type Language } from "../i18n";
 
 export type PostSummary = {
   id: string;
@@ -23,6 +23,17 @@ export async function getPosts(lang: Language) {
       ({ data }) => !data.draft && data.lang === lang,
     )
   ).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+}
+// Languages that have a published post with this id (slug).
+export async function getPostLanguages(id: string): Promise<Language[]> {
+  const available = await Promise.all(
+    languages.map(async (lang) =>
+      (await getPosts(lang)).some((post) => getPostId(post) === id)
+        ? lang
+        : undefined,
+    ),
+  );
+  return available.filter((lang): lang is Language => lang !== undefined);
 }
 export function summarize(post: CollectionEntry<"posts">): PostSummary {
   const id = getPostId(post);

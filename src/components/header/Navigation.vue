@@ -2,24 +2,23 @@
 import {
   languages,
   localizePath,
-  stripLanguage,
   useTranslations,
   type Language,
 } from "../../i18n";
 import { ref, onMounted, onUnmounted } from "vue";
 import { getHeaderConfig } from "../../config";
 import { initTheme, toggleTheme } from "../../scripts/theme";
-const props = defineProps<{ pathname: string; lang: Language }>();
+const props = defineProps<{
+  pathname: string;
+  lang: Language;
+  languageUrl: string;
+}>();
 const t = useTranslations(props.lang);
 const headerConfig = getHeaderConfig(props.lang);
 const home = localizePath(props.lang, "/");
 // Highlight any "0" in the logo text (e.g. a name like "r0ot").
 const brandParts = headerConfig.title.split(/(0)/).filter(Boolean);
 const otherLanguage = languages.find((value) => value !== props.lang)!;
-const otherLanguageUrl = localizePath(
-  otherLanguage,
-  stripLanguage(props.pathname),
-);
 const isDark = ref(false);
 const isAtTop = ref(true);
 const menuOpen = ref(false);
@@ -94,7 +93,7 @@ onUnmounted(() => {
         </button>
         <a
           class="icon-button language-switch"
-          :href="otherLanguageUrl"
+          :href="props.languageUrl"
           :hreflang="otherLanguage"
           :lang="otherLanguage"
           :aria-label="`${otherLanguage.toUpperCase()} · ${t('nav.language')}`"

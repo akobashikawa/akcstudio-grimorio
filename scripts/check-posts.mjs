@@ -9,6 +9,7 @@ const languages = ["en", "es"];
 const defaultLanguage = "en";
 const problems = [];
 const warnings = [];
+let unpaired = 0;
 
 const postsDir = (lang) => join(root, "src/content/posts", lang);
 const postFile = (lang, name) => join(postsDir(lang), name);
@@ -49,10 +50,11 @@ for (const lang of languages) {
     const slug = name.replace(/\.md$/, "");
     const file = postFile(lang, name);
     const path = relative(root, file);
-    if (!slugs[other].has(slug)) {
-      problems.push(`${path}: missing ${other}/${name}`);
-    }
     const data = frontmatter(file);
+    if (!slugs[other].has(slug) && field(data, "draft") !== "true") {
+      unpaired += 1;
+      warnings.push(`${path}: no ${other} translation yet`);
+    }
     const declared = field(data, "lang");
     if (!declared) {
       if (lang !== defaultLanguage) {
@@ -88,9 +90,11 @@ for (const slug of new Set([...slugs.en, ...slugs.es])) {
 for (const warning of warnings) console.warn(`warning: ${warning}`);
 if (problems.length > 0) {
   for (const problem of problems) console.error(`error: ${problem}`);
-  console.error(`\n${problems.length} post pair problem(s) found.`);
+  console.error(`\n${problems.length} post problem(s) found.`);
   process.exit(1);
 }
+const total = collection.en.length + collection.es.length;
+const suffix = unpaired > 0 ? ` (${unpaired} without translation)` : "";
 console.log(
-  `✓ ${collection.en.length + collection.es.length} post files are paired across ${languages.join("/")}.`,
+  `✓ ${total} post files validated across ${languages.join("/")}${suffix}.`,
 );

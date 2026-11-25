@@ -15,11 +15,11 @@ export function getProjects(lang: Language): Project[] {
   const es = lang === "es";
   return [
     {
-      name: "Grimorio",
+      name: "AKC Studio - Grimorio",
       description: es
         ? "La plantilla de blog con la que está hecho este sitio: Astro, bilingüe y centrada en el contenido."
         : "The blog template this site is built with: Astro, bilingual, and content-first.",
-      url: "https://github.com/sud0pls/Grimorio-astro",
+      url: "https://github.com/akobashikawa/akcstudio-grimorio",
       icon: "icon-[simple-icons--astro]",
       tech: ["Astro", "Vue", "TypeScript"],
       status: es ? "Plantilla de ejemplo" : "Example project",

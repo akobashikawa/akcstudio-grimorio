@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminApp from "../../components/admin/AdminApp.vue";
+import { categoryNames } from "../../data/post-options";
+import { getAdminRepoConfig } from "../../lib/admin-config";
+
+const repo = getAdminRepoConfig();
+const categories = [...categoryNames];
+---
+
+<BaseLayout
+  title="Admin"
+  description="Edit the posts in this site with a GitHub token."
+  noindex
+>
+  <section class="card admin-page">
+    <AdminApp client:load repo={repo} categories={categories} />
+  </section>
+</BaseLayout>
+
+<style>
+  .admin-page {
+    max-width: 960px;
+    margin: 28px auto 56px;
+    padding: 36px 44px;
+  }
+  @media (max-width: 760px) {
+    .admin-page {
+      margin: 18px 14px 36px;
+      padding: 22px 18px;
+    }
+  }
+</style>

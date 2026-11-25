@@ -1,44 +1,63 @@
 import { test, expect } from "@playwright/test";
-import { ogLocales, translate, useTranslations } from "../src/i18n";
+import { languages, ogLocales, translate, useTranslations } from "../src/i18n";
 import settings from "../src/site.config.json" with { type: "json" };
+import { busiestMonth, countBy, PAGE_SIZE, publishedPosts } from "./posts";
 
 const language = "en";
 const t = useTranslations(language);
+const posts = publishedPosts(language);
+const writingWithMarkdown = posts.find(
+  (post) => post.slug === "writing-with-markdown",
+)!;
+const welcomePost = posts.find((post) => post.slug === "welcome")!;
+// Fixed pages that the sitemap lists for each language: home, about, posts,
+// and projects. Post pages are added on top of these.
+const SITEMAP_PAGES_PER_LANGUAGE = 4;
 
 test("Home categories and URL state after reload", async ({ page }) => {
+  const categoryCounts = countBy(posts, (post) => post.category);
   await page.goto("/");
   await expect(page.locator(".post-feed")).toHaveAttribute(
     "data-ready",
     "true",
   );
-  await expect(page.locator(".post-card")).toHaveCount(3);
+  await expect(page.locator(".post-card")).toHaveCount(
+    Math.min(posts.length, PAGE_SIZE),
+  );
   for (const category of ["guides", "notes", "stories"] as const) {
     await page
       .getByRole("button", { name: t(`category.${category}`), exact: true })
       .click();
-    await expect(page.locator(".post-card")).toHaveCount(1);
+    const expected = categoryCounts[category] ?? 0;
+    await expect(page.locator(".post-card")).toHaveCount(expected);
     await expect(
       page.locator(`.post-card:not([data-category="${category}"])`),
     ).toHaveCount(0);
   }
   await expect(page).toHaveURL(/category=stories/);
   await page.reload();
-  await expect(page.locator(".post-card")).toHaveCount(1);
+  const stories = categoryCounts.stories ?? 0;
+  await expect(page.locator(".post-card")).toHaveCount(stories);
   await expect(page.locator('.post-card[data-category="stories"]')).toHaveCount(
-    1,
+    stories,
   );
 });
 
 test("Tags, month archives, and an unknown category", async ({ page }) => {
-  await page.goto("/posts/?tag=Markdown");
-  await expect(page.locator(".post-card")).toHaveCount(1);
-  await page.goto("/posts/?month=2026-03");
-  await expect(page.locator(".post-card")).toHaveCount(2);
-  await expect(page.locator(".filter-summary")).toContainText("2026-03");
+  const tag = "Markdown";
+  const tagCount = posts.filter((post) => post.tags.includes(tag)).length;
+  const { month, count: monthCount } = busiestMonth(posts);
+  await page.goto(`/posts/?tag=${tag}`);
+  await expect(page.locator(".post-card")).toHaveCount(tagCount);
+  await page.goto(`/posts/?month=${month}`);
+  await expect(page.locator(".post-card")).toHaveCount(monthCount);
+  await expect(page.locator(".filter-summary")).toContainText(month);
   await page.goto("/posts/?category=missing&page=-5");
   await expect(page.getByText(t("post.emptyTitle"))).toBeVisible();
   await page.getByRole("button", { name: t("post.viewAll") }).click();
-  await expect(page.locator(".post-card")).toHaveCount(3);
+  await expect(page.locator(".post-card")).toHaveCount(
+    Math.min(posts.length, PAGE_SIZE),
+  );
 });
 
 test("Search, empty results, and focus restoration", async ({ page }) => {
@@ -56,7 +75,7 @@ test("Search, empty results, and focus restoration", async ({ page }) => {
   await expect(dialog).toBeVisible();
   await page
     .getByRole("searchbox", { name: t("search.keywords") })
-    .fill("signal");
+    .fill("Markdown");
   await expect(dialog.locator(".search-result")).toHaveCount(1);
   await page
     .getByRole("searchbox", { name: t("search.keywords") })
@@ -69,9 +88,9 @@ test("Search, empty results, and focus restoration", async ({ page }) => {
   await expect(dialog).toBeVisible();
   await page
     .getByRole("searchbox", { name: t("search.keywords") })
-    .fill("signal");
+    .fill("Markdown");
   await dialog.locator(".search-result").click();
-  await expect(page).toHaveURL(/a-weekend-in-the-mountains/);
+  await expect(page).toHaveURL(/writing-with-markdown/);
   await expect(page.locator("#article-body")).toBeVisible();
 });
 
@@ -123,11 +142,15 @@ test("Article contents, code blocks, and adjacent posts", async ({
   page,
   isMobile,
 }) => {
-  await page.goto("/posts/writing-with-markdown/");
+  await page.goto(`/posts/${writingWithMarkdown.slug}/`);
   await expect(page.locator(".article-header h1")).toContainText("Markdown");
-  await expect(page.locator("#article-body h2")).toHaveCount(6);
+  await expect(page.locator("#article-body h2")).toHaveCount(
+    writingWithMarkdown.headings,
+  );
   await expect(page.locator("#article-body table")).toHaveCount(1);
-  await expect(page.locator(".copy-code")).toHaveCount(3);
+  await expect(page.locator(".copy-code")).toHaveCount(
+    writingWithMarkdown.codeBlocks,
+  );
   if (isMobile) {
     await page.locator(".mobile-toc summary").click();
     await page.locator(".mobile-toc a").last().click();
@@ -139,8 +162,25 @@ test("Article contents, code blocks, and adjacent posts", async ({
     "style",
     "width: 0%;",
   );
+  const writingIndex = posts.findIndex(
+    (post) => post.slug === writingWithMarkdown.slug,
+  );
+  const adjacent = posts[writingIndex - 1];
   await page.locator(".adjacent-posts a").click();
-  await expect(page).toHaveURL(/a-weekend-in-the-mountains/);
+  await expect(page).toHaveURL(new RegExp(`/posts/${adjacent.slug}/$`));
+});
+
+test("Posts without an outline hide the table of contents", async ({
+  page,
+}) => {
+  const withoutOutline = posts.find((post) => post.headings === 0)!;
+  await page.goto(`/posts/${withoutOutline.slug}/`);
+  await expect(page.locator(".toc")).toHaveCount(0);
+  await expect(page.locator(".mobile-toc")).toHaveCount(0);
+
+  await page.goto(`/posts/${writingWithMarkdown.slug}/`);
+  await expect(page.locator(".toc")).toHaveCount(1);
+  await expect(page.locator(".mobile-toc")).toHaveCount(1);
 });
 
 test("Page layouts, assets, and browser errors", async ({ page, isMobile }) => {
@@ -215,7 +255,7 @@ test("Page layouts, assets, and browser errors", async ({ page, isMobile }) => {
 test("Sitemap, RSS, and 404", async ({ page, request }) => {
   const feed = await request.get("/rss.xml");
   expect(feed.status()).toBe(200);
-  expect((await feed.text()).match(/<item>/g)).toHaveLength(3);
+  expect((await feed.text()).match(/<item>/g)).toHaveLength(posts.length);
   expect((await request.get("/sitemap.xml")).status()).toBe(200);
   expect(await (await request.get("/robots.txt")).text()).toContain("Sitemap:");
   const response = await page.goto("/a-page-that-does-not-exist/");
@@ -257,7 +297,13 @@ test("SEO metadata, official sitemap, and RSS consistency", async ({
       (entry) => entry.textContent!,
     );
   }, xml);
-  expect(locations).toHaveLength(14);
+  expect(locations).toHaveLength(
+    languages.reduce(
+      (total, lang) =>
+        total + SITEMAP_PAGES_PER_LANGUAGE + publishedPosts(lang).length,
+      0,
+    ),
+  );
   expect(locations).toContain(canonical);
   expect(
     locations.some((url) => /\/404(?:\/|\.|$)/.test(new URL(url).pathname)),
@@ -281,7 +327,7 @@ test("SEO metadata, official sitemap, and RSS consistency", async ({
     await feed.text(),
   );
   expect(feedInfo.errors).toBe(0);
-  expect(feedInfo.links).toHaveLength(3);
+  expect(feedInfo.links).toHaveLength(posts.length);
   await page.goto("/a-page-that-does-not-exist/");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
@@ -313,7 +359,7 @@ test("Reading all posts without JavaScript", async ({ browser, baseURL }) => {
       name: t("post.all"),
       exact: true,
     });
-    await expect(fallback.getByRole("link")).toHaveCount(3);
+    await expect(fallback.getByRole("link")).toHaveCount(posts.length);
     await fallback.getByRole("link").last().click();
     await expect(page.locator("#article-body")).toBeVisible();
   } finally {
@@ -378,7 +424,7 @@ test("Configured language, localized search, metadata, and local fonts", async (
   expect(
     fonts.every((url) => new URL(url).origin === new URL(page.url()).origin),
   ).toBe(true);
-  await page.goto("/posts/welcome/");
+  await page.goto(`/posts/${writingWithMarkdown.slug}/`);
   await expect(page.locator("#article-body h2").first()).toHaveCSS(
     "font-family",
     new RegExp(family),
@@ -390,24 +436,41 @@ test("Configured language, localized search, metadata, and local fonts", async (
     return {
       language: xml.querySelector("channel > language")?.textContent,
       title: xml.querySelector("item > title")?.textContent,
+      link: xml.querySelector("item > link")?.textContent,
     };
   }, rss);
   expect(feedInfo.language).toBe(language);
-  expect(feedInfo.title).toBe(
-    await page.locator(".article-header h1").textContent(),
-  );
+  await page.goto(new URL(feedInfo.link!).pathname);
+  await expect(page.locator(".article-header h1")).toHaveText(feedInfo.title!);
   expect(hydrationWarnings).toEqual([]);
 });
 
 test("Spanish routes and the language switch", async ({ page, request }) => {
   const es = (key: Parameters<typeof t>[0]) => translate("es", key);
   await page.goto("/posts/welcome/");
-  await page.getByRole("link", { name: t("nav.language") }).click();
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="en"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="es"]'),
+  ).toHaveAttribute("href", /\/es\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="x-default"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  const switchToSpanish = page.getByRole("link", { name: t("nav.language") });
+  await expect(switchToSpanish).toHaveAttribute("href", "/es/posts/welcome/");
+  await switchToSpanish.click();
   await expect(page).toHaveURL(/\/es\/posts\/welcome\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
   await expect(page.locator(".article-header h1")).toContainText("Bienvenido");
   await expect(
     page.locator('link[rel="alternate"][hreflang="en"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="es"]'),
+  ).toHaveAttribute("href", /\/es\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="x-default"]'),
   ).toHaveAttribute("href", /\/posts\/welcome\/$/);
   await page.getByRole("link", { name: es("article.back") }).click();
   await expect(page).toHaveURL(/\/es\/posts\/$/);
@@ -415,8 +478,9 @@ test("Spanish routes and the language switch", async ({ page, request }) => {
     "data-ready",
     "true",
   );
+  const newestSpanish = publishedPosts("es")[0];
   await expect(page.locator(".post-card").first()).toContainText(
-    es("category.guides"),
+    es(`category.${newestSpanish.category}` as Parameters<typeof t>[0]),
   );
   await page.getByRole("link", { name: es("nav.language") }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
@@ -429,7 +493,7 @@ test("Structured data and translated sitemap entries", async ({
   page,
   request,
 }) => {
-  await page.goto("/posts/welcome/");
+  await page.goto(`/posts/${welcomePost.slug}/`);
   const { "@graph": graph } = JSON.parse(
     (await page
       .locator('script[type="application/ld+json"]')
@@ -438,9 +502,10 @@ test("Structured data and translated sitemap entries", async ({
   const byType = (type: string) =>
     graph.find((item: { "@type": string }) => item["@type"] === type);
   const post = byType("BlogPosting");
-  expect(post.headline).toContain("Welcome");
-  expect(post.datePublished).toBe("2026-03-15T00:00:00.000Z");
-  expect(post.dateModified).toBe("2026-03-15T00:00:00.000Z");
+  const welcomeDate = `${welcomePost.date}T00:00:00.000Z`;
+  expect(post.headline).toBe(welcomePost.title);
+  expect(post.datePublished).toBe(welcomeDate);
+  expect(post.dateModified).toBe(welcomeDate);
   expect(post.inLanguage).toBe("en");
   expect(post.image.width).toBe(1200);
   expect(post.author["@id"]).toBe(byType("Person")["@id"]);
@@ -467,7 +532,7 @@ test("Structured data and translated sitemap entries", async ({
   const sitemap = await (await request.get("/sitemap-0.xml")).text();
   expect(sitemap).toContain('hreflang="es-ES"');
   expect(sitemap).toContain("/es/posts/welcome/");
-  expect(sitemap).toContain("<lastmod>2026-03-15T00:00:00.000Z</lastmod>");
+  expect(sitemap).toContain(`<lastmod>${welcomeDate}</lastmod>`);
   const feed = await (await request.get("/rss.xml")).text();
   expect(feed).toContain("<content:encoded>");
   expect(feed).toContain('rel="self"');
