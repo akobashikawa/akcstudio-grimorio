@@ -1,6 +1,6 @@
 # SPEC 03 — Un solo post por creación desde `/admin/` y atajo desde el 404
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-11-25
 > **Objective:** Crear un post completo de un solo idioma en un único paso desde `/admin/` y ofrecer desde el 404 la creación de la versión que falta en el otro idioma.
@@ -162,28 +162,28 @@ Convenciones:
 
 ## Acceptance criteria
 
-- [ ] **New post** muestra selector de idioma, título, slug, botón **Generate from title**, descripción, fecha, categoría, tags, featured, draft y cuerpo con Write/Preview.
-- [ ] El idioma inicial es `en` con los filtros `All` y `English`, y `es` con el filtro `Spanish`.
-- [ ] Pulsar **Generate from title** con `Canción de otoño` rellena el slug con `cancion-de-otono`.
-- [ ] El slug generado sigue siendo editable y no se vuelve a sincronizar al cambiar el título.
-- [ ] Un título que genera un slug vacío deja el slug vacío y muestra el error de validación.
-- [ ] Crear un post en inglés escribe solo `src/content/posts/en/{slug}.md` en un único commit.
-- [ ] Crear un post en español escribe solo `src/content/posts/es/{slug}.md` en un único commit.
-- [ ] Si el archivo ya existe en el idioma elegido, la creación falla con un mensaje claro y no se crea ningún commit.
-- [ ] Si el slug solo existe en el otro idioma, la creación se permite.
-- [ ] La descripción, la fecha, la categoría y los tags se validan antes de escribir.
-- [ ] `draft` empieza marcado y `featured` desmarcado; ambos valores se guardan tal como quedan en el formulario.
-- [ ] Tras crear, se vuelve al listado, el post aparece y se muestra un aviso de éxito.
-- [ ] `/admin/` ya no crea el archivo del otro idioma.
-- [ ] En `/es/posts/{slug}/` de un post publicado solo en inglés, con token guardado, aparece el botón para crear la versión en español.
-- [ ] En `/posts/{slug}/` de un post publicado solo en español, con token guardado, aparece el botón para crear la versión en inglés.
-- [ ] Sin token guardado, el 404 se ve exactamente como antes y no muestra el botón.
-- [ ] Una ruta que no sea un post, o un slug sin versión en el otro idioma, no muestra el botón.
-- [ ] El botón abre el admin con el idioma destino y el slug correctos, y copia título, descripción, fecha, categoría, tags, featured y cuerpo del post de origen.
-- [ ] La traducción precargada abre con `draft` marcado y `lang` del idioma destino.
-- [ ] `README.md` documenta el flujo de un solo idioma y el atajo del 404.
-- [ ] `pnpm format:check`, `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
-- [ ] No queda contenido de prueba en `src/content/posts/`.
+- [x] **New post** muestra selector de idioma, título, slug, botón **Generate from title**, descripción, fecha, categoría, tags, featured, draft y cuerpo con Write/Preview.
+- [x] El idioma inicial es `en` con los filtros `All` y `English`, y `es` con el filtro `Spanish`.
+- [x] Pulsar **Generate from title** con `Canción de otoño` rellena el slug con `cancion-de-otono`.
+- [x] El slug generado sigue siendo editable y no se vuelve a sincronizar al cambiar el título.
+- [x] Un título que genera un slug vacío deja el slug vacío y muestra el error de validación.
+- [x] Crear un post en inglés escribe solo `src/content/posts/en/{slug}.md` en un único commit.
+- [x] Crear un post en español escribe solo `src/content/posts/es/{slug}.md` en un único commit.
+- [x] Si el archivo ya existe en el idioma elegido, la creación falla con un mensaje claro y no se crea ningún commit.
+- [x] Si el slug solo existe en el otro idioma, la creación se permite.
+- [x] La descripción, la fecha, la categoría y los tags se validan antes de escribir.
+- [x] `draft` empieza marcado y `featured` desmarcado; ambos valores se guardan tal como quedan en el formulario.
+- [x] Tras crear, se vuelve al listado, el post aparece y se muestra un aviso de éxito.
+- [x] `/admin/` ya no crea el archivo del otro idioma.
+- [x] En `/es/posts/{slug}/` de un post publicado solo en inglés, con token guardado, aparece el botón para crear la versión en español.
+- [x] En `/posts/{slug}/` de un post publicado solo en español, con token guardado, aparece el botón para crear la versión en inglés.
+- [x] Sin token guardado, el 404 se ve exactamente como antes y no muestra el botón.
+- [x] Una ruta que no sea un post, o un slug sin versión en el otro idioma, no muestra el botón.
+- [x] El botón abre el admin con el idioma destino y el slug correctos, y copia título, descripción, fecha, categoría, tags, featured y cuerpo del post de origen.
+- [x] La traducción precargada abre con `draft` marcado y `lang` del idioma destino.
+- [x] `README.md` documenta el flujo de un solo idioma y el atajo del 404.
+- [x] `pnpm format:check`, `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
+- [x] No queda contenido de prueba en `src/content/posts/`.
 
 ## Decisions
 
