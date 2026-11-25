@@ -2,7 +2,7 @@
 title: "La violencia es el último recurso del incompetente"
 description: "Cuando solucionamos el problema equivocado"
 date: "2026-11-24"
-updated: "2026-11-24"
+updated: "2026-11-25"
 lang: "es"
 category: "notes"
 tags:
@@ -13,7 +13,7 @@ featured: false
 draft: false
 ---
 
-![La violencia es el último recurso del incompetente](/covers/asimov.jfif)
+![La violencia es el último recurso del incompetente](/covers/asimov.jpg)
 
 "La violencia es el último recurso del incompetente."
 
