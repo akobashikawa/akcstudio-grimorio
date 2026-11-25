@@ -162,18 +162,9 @@ function onPostSaved(updated: PostSummary) {
 
 async function onPostCreated(result: CreatePostResult) {
   await loadPosts();
-  const created =
-    posts.value.find(
-      (post) => post.lang === "en" && post.slug === result.slug,
-    ) ?? posts.value.find((post) => post.slug === result.slug);
-  if (created) {
-    selectedPost.value = created;
-    view.value = "edit";
-    updateQuery(created);
-  } else {
-    view.value = "list";
-    updateQuery();
-  }
+  view.value = "list";
+  selectedPost.value = null;
+  updateQuery();
 }
 
 function onUnauthorized() {
