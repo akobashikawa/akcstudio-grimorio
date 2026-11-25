@@ -153,7 +153,9 @@ The site also includes a browser editor at `/admin/`. It is not linked from the 
 3. Under **Repository access**, choose **Only select repositories** and select this repository. GitHub cannot preselect that step from the link.
 4. Paste the token into the admin page. It is stored only in this browser's `localStorage` and is sent only to `api.github.com`.
 
-The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, show a preview, create both language files in one commit, and save directly to `master`. A save triggers the normal deploy workflow.
+The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, and show a preview. **New post** creates a single file in the language you choose: enter the title, description, body and metadata, use **Generate from title** if you want the slug derived automatically, and create the post as a draft. To translate a post, create the same slug in the other language. Every save and creation commits directly to `master` and triggers the normal deploy workflow.
+
+If a post exists only in one language and you open its URL under the other language while a token is stored in this browser, the 404 page shows a button to create the missing version. The form opens prefilled with the original title, description, date, category, tags, featured flag and body, and always starts as a draft so you can translate it before publishing.
 
 Limitations:
 
@@ -161,6 +163,7 @@ Limitations:
 - Posts cannot be deleted or renamed, and the slug is fixed after creation. Use Pages CMS for that.
 - The preview is approximate and does not render Astro-specific components or directives.
 - The interface is English-only.
+- The 404 shortcut only appears in the browser where the GitHub token is stored.
 - The token lives in the browser. Use a short expiration, grant access only to this repository, and revoke the token from GitHub if it is exposed.
 
 The admin still produces ordinary Markdown files, so `pnpm check` validates the frontmatter and `lang` during the deploy build.
