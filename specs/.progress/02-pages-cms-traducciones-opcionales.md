@@ -16,7 +16,7 @@
 - [x] 5. `Navigation.vue`: recibir `languageUrl` como prop.
 - [x] 6. Fallback del selector al listado `/posts/` del otro idioma.
 - [x] 7. Filtrar `links` del sitemap en `astro.config.mjs`.
-- [ ] 8. Actualizar `README.md`.
+- [x] 8. Actualizar `README.md`.
 - [ ] 9. Ampliar `tests/blog.spec.ts`.
 - [ ] 10. Probar Pages CMS en la rama (login, edición, imagen, post de un idioma, rename/delete).
 - [ ] 11. `format:check`, `check`, `build`, `test:e2e` y limpieza del contenido de prueba.
@@ -31,12 +31,13 @@
 - Paso 4 completado y commiteado como `spec-02-step-04`: `BaseLayout` limita `hreflang`, `x-default` y `og:locale:alternate` a idiomas publicados. El paso de `languageUrl` a `Navigation` se movió al paso 5 porque `astro check` rechaza la prop antes de declararla.
 - Paso 5 completado y commiteado como `spec-02-step-05`: `Navigation` recibe `languageUrl` y `BaseLayout` la calcula con la ruta actual.
 - Paso 6 completado y commiteado como `spec-02-step-06`: si no existe traducción publicada, el selector va al listado `/posts/` del otro idioma.
-- Paso 7 completado (sin commitear): el sitemap filtra los `links` alternativos contra las páginas publicadas reales.
+- Paso 7 completado y commiteado como `spec-02-step-07`: el sitemap filtra los `links` alternativos contra las páginas publicadas reales.
+- Paso 8 completado (sin commitear): `README.md` documenta Pages CMS, la traducción opcional, el fallback del selector y el mantenimiento de `.pages.yml`.
 - El árbol de trabajo estaba limpio al crear la rama.
 
 ## Siguiente acción
 
-Commitear el paso 7 y continuar con el paso 8 (`README.md`). Para retomar:
+Commitear el paso 8 y continuar con el paso 9 (`tests/blog.spec.ts`). Para retomar:
 
 ```text
 /spec-impl 02-pages-cms-traducciones-opcionales

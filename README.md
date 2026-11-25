@@ -53,6 +53,7 @@ Open <http://localhost:4321>.
 ## Project structure
 
 ```
+.pages.yml           Pages CMS configuration
 src/
 ├─ assets/            Logo/avatar (and optional per-post banner overrides)
 ├─ components/        Vue islands + Astro layout pieces
@@ -70,12 +71,12 @@ public/               Favicons, fonts, static SVGs
 
 The site has two content sources, each with its own format and publishing flow:
 
-| Type         | Format                 | Where                                            | Publishing flow                                                                                                                  |
-| ------------ | ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Posts**    | Markdown collection    | `src/content/posts/en/`, `src/content/posts/es/` | Scaffold with `pnpm new-post` or create from `/admin/`, edit the frontmatter and body, set `draft: false`, then build and deploy |
-| **Projects** | Typed TypeScript array | `src/data/projects.ts`                           | Add or edit an object in `getProjects()`, then build and deploy                                                                  |
+| Type         | Format                 | Where                                            | Publishing flow                                                                                                                             |
+| ------------ | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Posts**    | Markdown collection    | `src/content/posts/en/`, `src/content/posts/es/` | Scaffold with `pnpm new-post`, create from `/admin/` or Pages CMS, edit the frontmatter and body, set `draft: false`, then build and deploy |
+| **Projects** | Typed TypeScript array | `src/data/projects.ts`                           | Add or edit an object in `getProjects()`, then build and deploy                                                                             |
 
-Only posts go through Astro's content collections and schema validation. Projects are a plain data module, so they have no drafts, dates, or pairing rules. Everything else (site name, navigation, UI copy, theme colors) is configuration rather than content; see [Make it yours](#make-it-yours).
+Only posts go through Astro's content collections and schema validation. Projects are a plain data module, so they have no drafts or dates. Everything else (site name, navigation, UI copy, theme colors) is configuration rather than content; see [Make it yours](#make-it-yours).
 
 ## Make it yours
 
@@ -95,9 +96,9 @@ After cloning, delete the example posts in `src/content/posts/` and the favicons
 
 ### Writing a post
 
-Create `src/content/posts/<lang>/<slug>.md`. Use the **same slug** in `es/` and `en/` so the language switch links the two versions.
+Create `src/content/posts/<lang>/<slug>.md`. A post can live in one language only. If you publish both versions, use the **same slug** in `es/` and `en/` so the language switch links them.
 
-Scaffold both files at once:
+Scaffold both files at once (optional):
 
 ```sh
 pnpm new-post my-post --category guides
@@ -119,13 +120,33 @@ updated: 2026-10-01 # optional: last-reviewed date, used in the sitemap
 ---
 ```
 
-`pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: every post must have a counterpart in the other language, and its `lang` must match the folder.
+`pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: `lang` must match the folder, and a published post without a translation produces a warning.
 
 The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work. For diagrams, drop an SVG in `public/` and reference it with a `<figure class="diagram">`.
 
+### Editing posts with Pages CMS
+
+[Pages CMS](https://pagescms.org) is a free, open-source editor that writes to this repository through a GitHub App. It coexists with `/admin/` and is configured in `.pages.yml`.
+
+1. Open <https://app.pagescms.org> and sign in with GitHub.
+2. Install the Pages CMS GitHub App for the account that owns this repository, with access only to this repository.
+3. Open the repository and select the branch to edit (`master` for production).
+4. Choose **Posts → English** or **Posts → Español**.
+
+Pages CMS can create, edit, rename and delete posts in either language, upload images to `public/covers`, and edit the body with a visual Markdown editor or its source view.
+
+Limitations:
+
+- Each entry is one language. To publish a translation, create the same slug in the other collection.
+- Renaming or deleting one side breaks the link with its translation. The language switch falls back to the other language's post listing.
+- There is no site preview. Use `pnpm dev` to preview locally.
+- `.pages.yml` is edited from GitHub, not from Pages CMS.
+
+Pages CMS commits to the selected branch and triggers the normal deploy workflow. Keep `.pages.yml` in sync with `src/content.config.ts` when the frontmatter schema changes.
+
 ### Editing posts from `/admin/`
 
-The site includes a browser editor at `/admin/`. It is not linked from the public navigation and is marked `noindex`.
+The site also includes a browser editor at `/admin/`. It is not linked from the public navigation and is marked `noindex`. Use Pages CMS if you need image uploads or a visual editor.
 
 1. Open `/admin/`.
 2. Create a GitHub fine-grained personal access token with **Contents: Read and write** access to this repository. The token creation link prefills the name, a 90-day expiration and the Contents permission.
@@ -137,12 +158,12 @@ The editor can list English and Spanish posts (including drafts), edit frontmatt
 Limitations:
 
 - There is no image upload. Reference files that already exist under `public/`.
-- Posts cannot be deleted or renamed, and the slug is fixed after creation.
+- Posts cannot be deleted or renamed, and the slug is fixed after creation. Use Pages CMS for that.
 - The preview is approximate and does not render Astro-specific components or directives.
 - The interface is English-only.
 - The token lives in the browser. Use a short expiration, grant access only to this repository, and revoke the token from GitHub if it is exposed.
 
-The admin still produces ordinary Markdown files, so `pnpm check` validates pairing and frontmatter during the deploy build.
+The admin still produces ordinary Markdown files, so `pnpm check` validates the frontmatter and `lang` during the deploy build.
 
 If the admin reports **GitHub denied access**, the token can read the repository but cannot write to it. Create a new fine-grained token with **Contents: Read and write** and select this repository under **Only select repositories**. Classic tokens need the `repo` scope. Logging in now performs a small write-capability check before storing the token. If the token is correct, also check that `master` does not block direct pushes.
 
@@ -176,7 +197,7 @@ Projects are listed from a typed array in `src/data/projects.ts`; there is no Ma
 Both content types are baked in at build time, so publishing means building and deploying:
 
 1. `pnpm dev` to preview the change locally.
-2. `pnpm check` (also part of `pnpm build`) to validate types, post pairing, and frontmatter.
+2. `pnpm check` (also part of `pnpm build`) to validate types, frontmatter, and `lang`.
 3. Commit and push to `master` for the deploy workflow, or run `pnpm run deploy` locally.
 
 Only posts with `draft: false` are included in the build; projects have no draft state and ship on the next build.
@@ -187,7 +208,7 @@ The three example categories are `guides`, `notes`, and `stories`. To change the
 
 ### Changing languages
 
-Languages are declared in `src/i18n/index.ts` (`languages` and `defaultLanguage`). To run the site in a single language, keep one entry; to swap the default, change `defaultLanguage`. Keep the sitemap locales in `astro.config.mjs` in sync.
+Languages are declared in `src/i18n/index.ts` (`languages` and `defaultLanguage`). To run the site in a single language, keep one entry; to swap the default, change `defaultLanguage`. Keep the sitemap locales and `publishedPages` paths in `astro.config.mjs` in sync, and update the two collections in `.pages.yml`.
 
 ## Deployment
 
@@ -280,7 +301,7 @@ A grouped PR carries a single lockfile change, so the coupled packages (Astro wi
 
 Dependabot only proposes versions that are at least three days old (its release cooldown), and it runs pnpm with `--config.minimum-release-age=4320`. If the lockfile already pins something younger than that, the update job fails with `ERR_PNPM_NO_MATURE_MATCHING_VERSION` for every dependency. That is not a configuration error: wait until the package is three days old and re-run the job from **Insights → Dependency graph → Dependabot → Check for updates**.
 
-Every PR runs the quality-check workflow (type-check, post pairing, `pnpm audit --audit-level=high`, build, smoke test, browser tests, and axe accessibility checks), which is also what keeps the lockfile free of known vulnerabilities.
+Every PR runs the quality-check workflow (type-check, post frontmatter and `lang`, `pnpm audit --audit-level=high`, build, smoke test, browser tests, and axe accessibility checks), which is also what keeps the lockfile free of known vulnerabilities.
 
 ## Credits
 
