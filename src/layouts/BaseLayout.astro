@@ -18,7 +18,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 import Navigation from "../components/header/Navigation.vue";
 import Search from "../components/header/Search.vue";
 import MainContainer from "../components/MainContainer.vue";
-import { getPosts, summarize } from "../lib/posts";
+import { getPostLanguages, getPosts, summarize } from "../lib/posts";
 type ArticleInfo = {
   id: string;
   published: Date;
@@ -51,6 +51,15 @@ const {
   noindex = false,
 } = Astro.props;
 const posts = (await getPosts(lang)).map(summarize);
+// On a post page, only languages with a published translation exist.
+const availableLanguages = article
+  ? await getPostLanguages(article.id)
+  : languages;
+const otherLanguage = languages.find((language) => language !== lang)!;
+// Without a translation, the switch goes to that language's post listing.
+const otherLanguageUrl = availableLanguages.includes(otherLanguage)
+  ? localizePath(otherLanguage, basePath)
+  : localizePath(otherLanguage, "/posts/");
 const pageTitle = title
   ? `${title} · ${siteInfo.title}`
   : `${siteInfo.title} · ${siteInfo.titleSuffix}`;
@@ -192,14 +201,14 @@ const jsonLd = JSON.stringify({
     />
     <link rel="canonical" href={canonical} />
     {!noindex &&
-      languages.map((language) => (
+      availableLanguages.map((language) => (
         <link
           rel="alternate"
           hreflang={language}
           href={absolute(localizePath(language, basePath))}
         />
       ))}
-    {!noindex && (
+    {!noindex && availableLanguages.includes(defaultLanguage) && (
       <link
         rel="alternate"
         hreflang="x-default"
@@ -212,7 +221,7 @@ const jsonLd = JSON.stringify({
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={siteInfo.locale} />
-    {languages
+    {availableLanguages
       .filter((language) => language !== lang)
       .map((language) => (
         <meta
@@ -275,7 +284,12 @@ const jsonLd = JSON.stringify({
     <a class="skip-link" href="#main-content">
       {t("common.skip")}
     </a>
-    <Navigation pathname={Astro.url.pathname} lang={lang} client:load />
+    <Navigation
+      pathname={Astro.url.pathname}
+      lang={lang}
+      languageUrl={otherLanguageUrl}
+      client:load
+    />
     <Search posts={posts} lang={lang} client:idle />
     <MainContainer>
       <main id="main-content" tabindex="-1">

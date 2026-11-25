@@ -1,0 +1,138 @@
+media:
+  input: public/covers
+  output: /covers
+  rename: safe
+  extensions: [jpg, jpeg, png, webp, avif, gif, svg]
+
+settings:
+  commit:
+    identity: user
+    templates:
+      create: "cms: add {path}"
+      update: "cms: update {path}"
+      delete: "cms: delete {path}"
+      rename: "cms: rename {oldPath} -> {newPath}"
+
+content:
+  - name: posts
+    label: Posts
+    type: group
+    items:
+      - name: posts-en
+        label: English
+        type: collection
+        path: src/content/posts/en
+        format: yaml-frontmatter
+        filename:
+          template: "{primary}.md"
+          field: create
+        view:
+          fields: [date, title, category, draft, featured]
+          primary: title
+          sort: [date, title]
+          search: [title, description, tags]
+          default:
+            sort: date
+            order: desc
+        fields:
+          - name: title
+            type: string
+            required: true
+            options:
+              maxlength: 120
+          - name: description
+            type: text
+            required: true
+            options:
+              maxlength: 300
+          - name: date
+            type: date
+            required: true
+            options:
+              format: yyyy-MM-dd
+          - name: updated
+            type: date
+            default: ""
+            options:
+              format: yyyy-MM-dd
+          - name: lang
+            type: string
+            hidden: true
+            default: en
+          - name: category
+            type: select
+            options:
+              values: [guides, notes, stories]
+          - name: tags
+            type: string
+            list: true
+          - name: featured
+            type: boolean
+            default: false
+          - name: draft
+            type: boolean
+            default: false
+          - name: body
+            type: rich-text
+            options:
+              format: markdown
+              switcher: true
+      - name: posts-es
+        label: Español
+        type: collection
+        path: src/content/posts/es
+        format: yaml-frontmatter
+        filename:
+          template: "{primary}.md"
+          field: create
+        view:
+          fields: [date, title, category, draft, featured]
+          primary: title
+          sort: [date, title]
+          search: [title, description, tags]
+          default:
+            sort: date
+            order: desc
+        fields:
+          - name: title
+            type: string
+            required: true
+            options:
+              maxlength: 120
+          - name: description
+            type: text
+            required: true
+            options:
+              maxlength: 300
+          - name: date
+            type: date
+            required: true
+            options:
+              format: yyyy-MM-dd
+          - name: updated
+            type: date
+            default: ""
+            options:
+              format: yyyy-MM-dd
+          - name: lang
+            type: string
+            hidden: true
+            default: es
+          - name: category
+            type: select
+            options:
+              values: [guides, notes, stories]
+          - name: tags
+            type: string
+            list: true
+          - name: featured
+            type: boolean
+            default: false
+          - name: draft
+            type: boolean
+            default: false
+          - name: body
+            type: rich-text
+            options:
+              format: markdown
+              switcher: true

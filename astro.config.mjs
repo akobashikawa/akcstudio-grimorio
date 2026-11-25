@@ -53,20 +53,30 @@ if (
 // sitemap can tell search engines which pages changed.
 /** @type {Map<string, Date>} */
 const lastModified = new Map();
+// Every page that exists, so sitemap alternates never point to a missing URL.
+const publishedPages = new Set([
+  "/",
+  "/about/",
+  "/projects/",
+  "/posts/",
+  "/es/",
+  "/es/about/",
+  "/es/projects/",
+  "/es/posts/",
+]);
 for (const lang of ["es", "en"]) {
   const dir = `./src/content/posts/${lang}`;
   for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
     const frontmatter = readFileSync(`${dir}/${file}`, "utf8").split("---")[1];
     if (/^draft:\s*true/m.test(frontmatter)) continue;
+    const prefix = lang === "en" ? "" : `/${lang}`;
+    const pagePath = `${prefix}/posts/${file.replace(/\.md$/, "")}/`;
+    publishedPages.add(pagePath);
     const date =
       /^updated:\s*(\S+)/m.exec(frontmatter)?.[1] ??
       /^date:\s*(\S+)/m.exec(frontmatter)?.[1];
     if (!date) continue;
-    const prefix = lang === "en" ? "" : `/${lang}`;
-    lastModified.set(
-      `${prefix}/posts/${file.replace(/\.md$/, "")}/`,
-      new Date(date),
-    );
+    lastModified.set(pagePath, new Date(date));
   }
 }
 /** Newest post date for the English ("") or Spanish ("/es/") listings. */
@@ -117,11 +127,20 @@ export default defineConfig({
         ].includes(new URL(page).pathname),
       serialize(item) {
         const path = new URL(item.url).pathname;
+        const page = { ...item };
+        if (page.links) {
+          const links = page.links.filter((link) =>
+            publishedPages.has(new URL(link.url).pathname),
+          );
+          if (links.length > 1) page.links = links;
+          else delete page.links;
+        }
         const listing = /^\/(es\/)?(posts\/)?$/.exec(path);
         const date = listing
           ? newest(listing[1] ? "/es/" : "")
           : lastModified.get(path);
-        return date ? { ...item, lastmod: date.toISOString() } : item;
+        if (date) page.lastmod = date.toISOString();
+        return page;
       },
     }),
   ],
