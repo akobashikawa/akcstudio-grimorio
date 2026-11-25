@@ -2,6 +2,7 @@
 title: "Pages CMS para editar posts Astro"
 description: "Cómo editar tus posts aprovechando el backend de GitHub"
 date: "2026-11-25"
+updated: "2026-11-25"
 lang: "es"
 category: "guides"
 tags:
@@ -9,7 +10,7 @@ tags:
   - "GitHub"
   - "CMS"
 featured: false
-draft: true
+draft: false
 ---
 
 ![](/covers/pages-cms-icon.png)
