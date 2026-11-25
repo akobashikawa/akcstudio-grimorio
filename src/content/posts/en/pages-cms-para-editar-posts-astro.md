@@ -1,23 +1,25 @@
 ---
-title: Pages CMS para editar posts Astro
-description: Cómo editar tus posts aprovechando el backend de GitHub
-date: 2026-11-25
-lang: en
-category: guides
+title: "Pages CMS para editar posts Astro"
+description: "Cómo editar tus posts aprovechando el backend de GitHub"
+date: "2026-11-25"
+updated: "2026-11-25"
+lang: "en"
+category: "guides"
 tags:
-  - Astro
-  - GitHub
-  - CMS
+  - "Astro"
+  - "GitHub"
+  - "CMS"
 featured: false
 draft: false
 ---
+
 ![](/covers/pages-cms-icon.png)
 
 Astro permite crear un blog con páginas estáticas.
 
 Una forma básica de editarlas es directamente en GitHub.
 
-Otra manera muy conveniente es usar [Pages CMS]([https://pagescms.org/](https://pagescms.org/)), que usa un archivo de configuración para construir un ambiente externo que permita administrar tus posts y también tus imágenes.
+Otra manera muy conveniente es usar [Pages CMS]([https://pagescms.org/](https://pagescms.org/)), que usa un archivo de configuración para construir un ambiente externo que te permite administrar tus posts y también tus imágenes.
 
 Pasos:
 
@@ -174,6 +176,4 @@ content:
               format: markdown
               switcher: true
 
-  
 ```
-
