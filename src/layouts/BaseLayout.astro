@@ -56,7 +56,10 @@ const availableLanguages = article
   ? await getPostLanguages(article.id)
   : languages;
 const otherLanguage = languages.find((language) => language !== lang)!;
-const otherLanguageUrl = localizePath(otherLanguage, basePath);
+// Without a translation, the switch goes to that language's post listing.
+const otherLanguageUrl = availableLanguages.includes(otherLanguage)
+  ? localizePath(otherLanguage, basePath)
+  : localizePath(otherLanguage, "/posts/");
 const pageTitle = title
   ? `${title} · ${siteInfo.title}`
   : `${siteInfo.title} · ${siteInfo.titleSuffix}`;
