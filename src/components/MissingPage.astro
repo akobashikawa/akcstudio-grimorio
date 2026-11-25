@@ -1,9 +1,30 @@
 ---
-import { getLanguageFromPath, localizePath, useTranslations } from "../i18n";
+import {
+  getLanguageFromPath,
+  languages,
+  localizePath,
+  useTranslations,
+  type Language,
+} from "../i18n";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { getPostId, getPosts } from "../lib/posts";
 
 const lang = getLanguageFromPath(Astro.url.pathname);
 const t = useTranslations(lang);
+const entries = await Promise.all(
+  languages.map(
+    async (language) =>
+      [language, (await getPosts(language)).map(getPostId)] as const,
+  ),
+);
+const missingPostIndex = Object.fromEntries(entries) as Record<
+  Language,
+  string[]
+>;
+const missingPostIndexJson = JSON.stringify(missingPostIndex).replace(
+  /</g,
+  "\\u003c",
+);
 ---
 
 <BaseLayout title={t("error.title")} heroTitle={t("error.heroTitle")} noindex>
@@ -18,9 +39,71 @@ const t = useTranslations(lang);
       <a href={localizePath(lang, "/posts/")} class="btn secondary">
         {t("error.posts")}
       </a>
+      <div id="missing-post-cta" class="missing-post-cta" hidden>
+        <p>{t("error.createMissing")}</p>
+        <a id="missing-post-link" class="btn" href="#">
+          {t("error.createPost")}
+        </a>
+      </div>
     </div>
   </div>
+  <script
+    type="application/json"
+    id="missing-post-index"
+    is:inline
+    set:html={missingPostIndexJson}
+  ></script>
 </BaseLayout>
+
+<script>
+  import { ADMIN_STORAGE_KEYS } from "../lib/admin-config";
+
+  const POST_PATH = /^\/(?:(es)\/)?posts\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+
+  const indexElement = document.getElementById("missing-post-index");
+  const block = document.getElementById("missing-post-cta");
+  const link = document.getElementById("missing-post-link");
+
+  if (indexElement && block && link) {
+    try {
+      const index = JSON.parse(indexElement.textContent || "{}") as Record<
+        string,
+        string[]
+      >;
+      const path = window.location.pathname.replace(/\/+$/, "");
+      const match = POST_PATH.exec(path);
+
+      if (match) {
+        const lang = match[1] === "es" ? "es" : "en";
+        const other = lang === "en" ? "es" : "en";
+        const slug = match[2];
+        let hasToken = false;
+        try {
+          hasToken = Boolean(localStorage.getItem(ADMIN_STORAGE_KEYS.token));
+        } catch {
+          hasToken = false;
+        }
+
+        const present = index[lang] ?? [];
+        const counterparts = index[other] ?? [];
+        if (
+          hasToken &&
+          !present.includes(slug) &&
+          counterparts.includes(slug)
+        ) {
+          link.setAttribute(
+            "href",
+            `/admin/?new=1&lang=${lang}&fromLang=${other}&fromSlug=${slug}`,
+          );
+          block.hidden = false;
+        }
+      }
+    } catch {
+      // Keep the normal 404 when the index cannot be read.
+    }
+  }
+</script>
+
 <style>
   .missing-page {
     padding-top: 48px;
@@ -46,5 +129,14 @@ const t = useTranslations(lang);
   }
   .missing-page .btn {
     margin: 4px;
+  }
+  .missing-post-cta {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .missing-post-cta p {
+    margin: 0 0 12px;
+    font-size: 15px;
   }
 </style>
