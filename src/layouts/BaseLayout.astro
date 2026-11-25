@@ -55,6 +55,8 @@ const posts = (await getPosts(lang)).map(summarize);
 const availableLanguages = article
   ? await getPostLanguages(article.id)
   : languages;
+const otherLanguage = languages.find((language) => language !== lang)!;
+const otherLanguageUrl = localizePath(otherLanguage, basePath);
 const pageTitle = title
   ? `${title} · ${siteInfo.title}`
   : `${siteInfo.title} · ${siteInfo.titleSuffix}`;
@@ -279,7 +281,12 @@ const jsonLd = JSON.stringify({
     <a class="skip-link" href="#main-content">
       {t("common.skip")}
     </a>
-    <Navigation pathname={Astro.url.pathname} lang={lang} client:load />
+    <Navigation
+      pathname={Astro.url.pathname}
+      lang={lang}
+      languageUrl={otherLanguageUrl}
+      client:load
+    />
     <Search posts={posts} lang={lang} client:idle />
     <MainContainer>
       <main id="main-content" tabindex="-1">
