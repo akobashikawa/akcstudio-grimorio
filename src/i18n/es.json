@@ -112,6 +112,8 @@
   "error.description": "Puede que se haya movido o que el enlace tenga una errata.",
   "error.home": "Volver al inicio",
   "error.posts": "Ver artículos",
+  "error.createMissing": "Este artículo solo existe en el otro idioma.",
+  "error.createPost": "Crearlo en este idioma",
   "meta.postsTitle": "Guías, notas e historias",
   "meta.postsDescription": "Todos los artículos de {site}: guías prácticas, notas de aprendizaje e historias.",
   "meta.aboutDescription": "Quién es {name} y de qué va este blog: guías, notas e historias sobre lo que va aprendiendo.",

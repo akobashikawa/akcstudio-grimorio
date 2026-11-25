@@ -30,11 +30,6 @@ export type FrontmatterValidation =
   | { ok: true; value: PostFrontmatter }
   | { ok: false; errors: FrontmatterErrors };
 
-export const PENDING_DESCRIPTIONS: Record<PostLanguage, string> = {
-  en: "Pending description.",
-  es: "Descripción pendiente.",
-};
-
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
@@ -213,23 +208,4 @@ export function serializePost(
     .trimEnd();
 
   return `---\n${yaml}---\n\n${normalizedBody}${normalizedBody ? "\n" : ""}`;
-}
-
-export function createPostFrontmatter(input: {
-  title: string;
-  date: string;
-  category: Category;
-  tags: string[];
-  lang: PostLanguage;
-}): PostFrontmatter {
-  return {
-    title: input.title.trim(),
-    description: PENDING_DESCRIPTIONS[input.lang],
-    date: input.date,
-    lang: input.lang,
-    category: input.category,
-    tags: input.tags,
-    featured: false,
-    draft: true,
-  };
 }

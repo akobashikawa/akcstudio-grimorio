@@ -1,7 +1,6 @@
 import type { Category } from "../data/post-options";
 import type { AdminRepoConfig } from "./admin-config";
 import {
-  createPostFrontmatter,
   parsePostSource,
   serializePost,
   today,
@@ -13,7 +12,6 @@ import {
 const API_BASE = "https://api.github.com";
 const CONTENT_ROOT = "src/content/posts";
 
-export const POST_LANGUAGES: PostLanguage[] = ["en", "es"];
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export class GithubApiError extends Error {
@@ -74,17 +72,31 @@ export type SavePostResult = {
 };
 
 export type CreatePostInput = {
+  lang: PostLanguage;
   slug: string;
-  title: string;
-  date: string;
-  category: Category;
-  tags: string[];
+  frontmatter: PostFrontmatter;
+  body: string;
 };
 
 export type CreatePostResult = {
+  lang: PostLanguage;
   slug: string;
+  path: string;
+  sha: string;
   commitSha: string;
-  files: { lang: PostLanguage; path: string; sha: string }[];
+};
+
+// Values used to prefill the creator when a translation is missing.
+export type CreatePostPrefill = {
+  lang: PostLanguage;
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+  category: Category;
+  tags: string[];
+  featured: boolean;
+  body: string;
 };
 
 type ContentsItem = {
@@ -111,15 +123,6 @@ type RepoResponse = {
 
 type UserResponse = {
   login: string;
-};
-
-type GitRefResponse = {
-  object: { sha: string };
-};
-
-type GitCommitResponse = {
-  sha: string;
-  tree: { sha: string };
 };
 
 type GitObjectResponse = {
@@ -361,7 +364,7 @@ export async function savePost(
   };
 }
 
-export async function createPostPair(
+export async function createPost(
   config: AdminRepoConfig,
   token: string,
   input: CreatePostInput,
@@ -372,105 +375,48 @@ export async function createPostPair(
     );
   }
 
-  const files = POST_LANGUAGES.map((lang) => {
-    const frontmatter = createPostFrontmatter({ ...input, lang });
-    const validation = validateFrontmatter(frontmatter, lang);
-    if (!validation.ok) {
-      const details = Object.entries(validation.errors)
-        .map(([field, message]) => `${field}: ${message}`)
-        .join(" ");
-      throw new Error(`Invalid frontmatter. ${details}`);
-    }
-    return {
-      lang,
-      path: postPath(lang, input.slug),
-      content: serializePost(validation.value, ""),
-    };
-  });
+  const validation = validateFrontmatter(input.frontmatter, input.lang);
+  if (!validation.ok) {
+    const details = Object.entries(validation.errors)
+      .map(([field, message]) => `${field}: ${message}`)
+      .join(" ");
+    throw new Error(`Invalid frontmatter. ${details}`);
+  }
 
-  await Promise.all(
-    files.map(async (file) => {
-      const response = await githubFetch(
-        contentsPath(config, file.path),
-        token,
-        {},
-        { allowNotFound: true },
-      );
-      await response.text();
-      if (response.status !== 404) {
-        throw new GithubApiError(
-          409,
-          `A post with slug "${input.slug}" already exists in ${file.lang}.`,
-        );
-      }
-    }),
-  );
-
-  const root = repoPath(config);
-  const ref = await githubJson<GitRefResponse>(
-    `${root}/git/ref/heads/${config.branch}`,
+  const path = postPath(input.lang, input.slug);
+  const existing = await githubFetch(
+    contentsPath(config, path),
     token,
+    {},
+    { allowNotFound: true },
   );
-  const head = await githubJson<GitCommitResponse>(
-    `${root}/git/commits/${ref.object.sha}`,
-    token,
-  );
+  await existing.text();
+  if (existing.status !== 404) {
+    throw new GithubApiError(
+      409,
+      `A post with slug "${input.slug}" already exists in ${input.lang}.`,
+    );
+  }
 
-  const blobs = await Promise.all(
-    files.map(async (file) => {
-      const blob = await githubJson<GitObjectResponse>(
-        `${root}/git/blobs`,
-        token,
-        {
-          method: "POST",
-          body: JSON.stringify({ content: file.content, encoding: "utf-8" }),
-        },
-      );
-      return { ...file, sha: blob.sha };
-    }),
-  );
-
-  const tree = await githubJson<GitObjectResponse>(`${root}/git/trees`, token, {
-    method: "POST",
-    body: JSON.stringify({
-      base_tree: head.tree.sha,
-      tree: blobs.map(({ path, sha }) => ({
-        path,
-        mode: "100644",
-        type: "blob",
-        sha,
-      })),
-    }),
-  });
-
-  const commit = await githubJson<GitObjectResponse>(
-    `${root}/git/commits`,
+  const response = await githubJson<ContentsPutResponse>(
+    `${repoPath(config)}/contents/${path}`,
     token,
     {
-      method: "POST",
+      method: "PUT",
       body: JSON.stringify({
-        message: `cms: create ${files
-          .map((file) => `posts/${file.lang}/${input.slug}.md`)
-          .join(" and ")}`,
-        tree: tree.sha,
-        parents: [ref.object.sha],
+        message: `cms: create posts/${input.lang}/${input.slug}.md`,
+        content: encodeBase64(serializePost(validation.value, input.body)),
+        branch: config.branch,
       }),
     },
   );
 
-  await githubJson<GitRefResponse>(
-    `${root}/git/refs/heads/${config.branch}`,
-    token,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ sha: commit.sha, force: false }),
-    },
-  );
-
   return {
+    lang: input.lang,
     slug: input.slug,
-    commitSha: commit.sha,
-    files: blobs.map(({ lang, path, sha }) => ({ lang, path, sha })),
+    path,
+    sha: response.content.sha,
+    commitSha: response.commit.sha,
   };
 }
 

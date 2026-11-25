@@ -112,6 +112,8 @@
   "error.description": "It may have moved, or the link may contain a typo.",
   "error.home": "Back home",
   "error.posts": "Browse posts",
+  "error.createMissing": "This post only exists in the other language.",
+  "error.createPost": "Create it in this language",
   "meta.postsTitle": "Guides, notes, and stories",
   "meta.postsDescription": "Every post on {site}: practical guides, learning notes, and stories.",
   "meta.aboutDescription": "Who {name} is and what this blog is about: guides, notes, and stories about what they're learning.",

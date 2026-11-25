@@ -10,14 +10,18 @@ import {
   storeSession,
 } from "../../lib/admin-session";
 import {
+  getPost,
   GithubApiError,
+  isValidSlug,
   listPosts,
   validateToken,
   verifyWriteAccess,
   type AdminSession,
+  type CreatePostPrefill,
   type CreatePostResult,
   type PostSummary,
 } from "../../lib/github-content";
+import { today, type PostLanguage } from "../../lib/frontmatter";
 import PostCreator from "./PostCreator.vue";
 import PostEditor from "./PostEditor.vue";
 import PostList from "./PostList.vue";
@@ -38,6 +42,15 @@ const loadingPosts = ref(false);
 const postsError = ref("");
 const view = ref<AdminView>("list");
 const selectedPost = ref<PostSummary | null>(null);
+const createLang = ref<PostLanguage>("en");
+const createPrefill = ref<CreatePostPrefill | null>(null);
+const createNotice = ref("");
+const listNotice = ref("");
+const fallbackCategory: Category = props.categories.includes(
+  "notes" as Category,
+)
+  ? "notes"
+  : (props.categories[0] ?? "notes");
 
 onMounted(async () => {
   const stored = loadStoredSession();
@@ -71,7 +84,7 @@ onMounted(async () => {
     storeSession(next);
     session.value = next;
     await loadPosts();
-    openFromQuery();
+    await openFromQuery();
   } catch (reason) {
     clearStoredSession();
     loginError.value =
@@ -118,10 +131,11 @@ async function loadPosts() {
 async function onAuthenticated(next: AdminSession) {
   session.value = next;
   loginError.value = "";
+  listNotice.value = "";
   view.value = "list";
   selectedPost.value = null;
   await loadPosts();
-  openFromQuery();
+  await openFromQuery();
 }
 
 function logout() {
@@ -129,6 +143,9 @@ function logout() {
   session.value = null;
   posts.value = [];
   postsError.value = "";
+  listNotice.value = "";
+  createNotice.value = "";
+  createPrefill.value = null;
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "";
@@ -136,18 +153,26 @@ function logout() {
 }
 
 function editPost(post: PostSummary) {
+  listNotice.value = "";
   selectedPost.value = post;
   view.value = "edit";
   updateQuery(post);
 }
 
-function startCreate() {
+function startCreate(lang: PostLanguage = "en") {
+  listNotice.value = "";
+  createNotice.value = "";
+  createPrefill.value = null;
+  createLang.value = lang;
   selectedPost.value = null;
   view.value = "new";
   updateQuery();
 }
 
 function backToList() {
+  listNotice.value = "";
+  createNotice.value = "";
+  createPrefill.value = null;
   view.value = "list";
   selectedPost.value = null;
   updateQuery();
@@ -162,18 +187,12 @@ function onPostSaved(updated: PostSummary) {
 
 async function onPostCreated(result: CreatePostResult) {
   await loadPosts();
-  const created =
-    posts.value.find(
-      (post) => post.lang === "en" && post.slug === result.slug,
-    ) ?? posts.value.find((post) => post.slug === result.slug);
-  if (created) {
-    selectedPost.value = created;
-    view.value = "edit";
-    updateQuery(created);
-  } else {
-    view.value = "list";
-    updateQuery();
-  }
+  view.value = "list";
+  selectedPost.value = null;
+  createNotice.value = "";
+  createPrefill.value = null;
+  listNotice.value = `Created posts/${result.lang}/${result.slug}.md.`;
+  updateQuery();
 }
 
 function onUnauthorized() {
@@ -181,6 +200,9 @@ function onUnauthorized() {
   session.value = null;
   posts.value = [];
   postsError.value = "";
+  listNotice.value = "";
+  createNotice.value = "";
+  createPrefill.value = null;
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "Your GitHub token expired. Connect again.";
@@ -190,19 +212,24 @@ function onUnauthorized() {
 function updateQuery(post?: PostSummary) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
+  for (const key of ["lang", "slug", "new", "fromLang", "fromSlug"]) {
+    url.searchParams.delete(key);
+  }
   if (post) {
     url.searchParams.set("lang", post.lang);
     url.searchParams.set("slug", post.slug);
-  } else {
-    url.searchParams.delete("lang");
-    url.searchParams.delete("slug");
   }
   window.history.replaceState(null, "", url.href);
 }
 
-function openFromQuery() {
+async function openFromQuery() {
   if (typeof window === "undefined") return;
   const params = new URLSearchParams(window.location.search);
+  if (params.get("new") === "1") {
+    await openCreateFromQuery(params);
+    return;
+  }
+
   const lang = params.get("lang");
   const slug = params.get("slug");
   if (!lang || !slug) return;
@@ -219,6 +246,72 @@ function openFromQuery() {
   }
   selectedPost.value = post;
   view.value = "edit";
+}
+
+async function openCreateFromQuery(params: URLSearchParams) {
+  const lang = params.get("lang");
+  if (lang !== "en" && lang !== "es") {
+    updateQuery();
+    return;
+  }
+
+  const fromLang = params.get("fromLang");
+  const fromSlug = params.get("fromSlug");
+  let prefill: CreatePostPrefill | null = null;
+  let notice = "";
+
+  if (
+    (fromLang === "en" || fromLang === "es") &&
+    fromLang !== lang &&
+    fromSlug &&
+    isValidSlug(fromSlug)
+  ) {
+    const current = session.value;
+    if (!current) return;
+    try {
+      const source = await getPost(
+        props.repo,
+        current.token,
+        fromLang,
+        fromSlug,
+      );
+      prefill = {
+        lang,
+        slug: fromSlug,
+        title: source.frontmatter.title,
+        description: source.frontmatter.description,
+        date: source.frontmatter.date,
+        category: source.frontmatter.category,
+        tags: source.frontmatter.tags,
+        featured: source.frontmatter.featured,
+        body: source.body,
+      };
+    } catch (reason) {
+      if (reason instanceof GithubApiError && reason.status === 401) {
+        onUnauthorized();
+        return;
+      }
+      prefill = {
+        lang,
+        slug: fromSlug,
+        title: "",
+        description: "",
+        date: today(),
+        category: fallbackCategory,
+        tags: [],
+        featured: false,
+        body: "",
+      };
+      notice = "Could not load the original post. Fill in the fields manually.";
+    }
+  }
+
+  createLang.value = lang;
+  createPrefill.value = prefill;
+  createNotice.value = notice;
+  listNotice.value = "";
+  selectedPost.value = null;
+  view.value = "new";
 }
 
 function formatExpiration(value?: string): string {
@@ -259,15 +352,19 @@ function formatExpiration(value?: string): string {
       @authenticated="onAuthenticated"
     />
     <template v-else>
-      <PostList
-        v-if="view === 'list'"
-        :posts="posts"
-        :loading="loadingPosts"
-        :error="postsError"
-        @edit="editPost"
-        @create="startCreate"
-        @refresh="loadPosts"
-      />
+      <template v-if="view === 'list'">
+        <p v-if="listNotice" class="admin-success" role="status">
+          {{ listNotice }}
+        </p>
+        <PostList
+          :posts="posts"
+          :loading="loadingPosts"
+          :error="postsError"
+          @edit="editPost"
+          @create="startCreate"
+          @refresh="loadPosts"
+        />
+      </template>
       <PostEditor
         v-else-if="view === 'edit' && selectedPost"
         :key="`${selectedPost.lang}/${selectedPost.slug}`"
@@ -279,15 +376,21 @@ function formatExpiration(value?: string): string {
         @back="backToList"
         @unauthorized="onUnauthorized"
       />
-      <PostCreator
-        v-else-if="view === 'new'"
-        :repo="repo"
-        :token="session.token"
-        :categories="categories"
-        @created="onPostCreated"
-        @back="backToList"
-        @unauthorized="onUnauthorized"
-      />
+      <template v-else-if="view === 'new'">
+        <p v-if="createNotice" class="admin-error" role="alert">
+          {{ createNotice }}
+        </p>
+        <PostCreator
+          :repo="repo"
+          :token="session.token"
+          :categories="categories"
+          :initial-lang="createLang"
+          :prefill="createPrefill ?? undefined"
+          @created="onPostCreated"
+          @back="backToList"
+          @unauthorized="onUnauthorized"
+        />
+      </template>
       <section v-else class="admin-view">
         <button class="btn secondary" type="button" @click="backToList">
           ← Back to posts
@@ -346,6 +449,34 @@ function formatExpiration(value?: string): string {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+.admin-success {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #b7dcc4;
+  border-radius: var(--radius);
+  background: #eef8f1;
+  color: #22633a;
+  font-size: 14px;
+}
+:global(.dark) .admin-success {
+  border-color: #315640;
+  background: #1d2c23;
+  color: #91d3a7;
+}
+.admin-error {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #e7b4ae;
+  border-radius: var(--radius);
+  background: #fdf2f1;
+  color: #b42318;
+  font-size: 14px;
+}
+:global(.dark) .admin-error {
+  border-color: #623b37;
+  background: #2c211f;
+  color: #ff9b8f;
 }
 .admin-view {
   display: grid;
