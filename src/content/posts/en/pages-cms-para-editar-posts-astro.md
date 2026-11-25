@@ -11,6 +11,8 @@ tags:
 featured: false
 draft: false
 ---
+![](/covers/pages-cms-icon.png)
+
 Astro permite crear un blog con páginas estáticas.
 
 Una forma básica de editarlas es directamente en GitHub.
@@ -31,7 +33,6 @@ Pasos:
 [Overview | Pages CMS]([https://pagescms.org/docs/configuration/](https://pagescms.org/docs/configuration/)) describe las opciones de configuración.
 
 Este es el archivo que yo he usando para mi proyecto de blog usando Astro con el theme [Grimorio]([https://astro.build/themes/details/grimorio/](https://astro.build/themes/details/grimorio/)):  
-  
 
 ```yaml
 media:
