@@ -11,7 +11,7 @@
 
 - [x] 1. Crear/rellenar `.pages.yml` con media, settings y ambas colecciones.
 - [x] 2. `scripts/check-posts.mjs`: falta de pareja = aviso; `lang` incorrecto sigue siendo error.
-- [ ] 3. Añadir `getPostLanguages(id)` a `src/lib/posts.ts`.
+- [x] 3. Añadir `getPostLanguages(id)` a `src/lib/posts.ts`.
 - [ ] 4. `BaseLayout.astro`: idiomas disponibles, `hreflang`, `x-default`, `og:locale:alternate` y `languageUrl`.
 - [ ] 5. `Navigation.vue`: recibir `languageUrl` como prop.
 - [ ] 6. Fallback del selector al listado `/posts/` del otro idioma.
@@ -26,7 +26,8 @@
 - `.pages.yml` ya existía en `master` pero estaba vacío (0 bytes). El paso 1 lo rellena.
 - `src/content/posts/{en,es}/prueba-nuevo-post.md` son posts de prueba creados con Pages CMS. Confirmar antes de borrarlos en el paso 11.
 - Paso 1 completado y commiteado como `spec-02-step-01`: `.pages.yml` relleno con `media`, `settings` y las dos colecciones. `pnpm build` pasa.
-- Paso 2 completado (sin commitear): `check-posts` avisa de posts publicados sin traducción, ignora borradores sin pareja y sigue fallando si `lang` no coincide con la carpeta.
+- Paso 2 completado y commiteado como `spec-02-step-02`: `check-posts` avisa de posts publicados sin traducción, ignora borradores sin pareja y sigue fallando si `lang` no coincide con la carpeta.
+- Paso 3 completado (sin commitear): `getPostLanguages(id)` devuelve los idiomas con un post publicado para ese slug. `pnpm check` pasa.
 - El árbol de trabajo estaba limpio al crear la rama.
 
 ## Siguiente acción
