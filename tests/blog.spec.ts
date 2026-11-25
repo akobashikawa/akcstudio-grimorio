@@ -448,12 +448,29 @@ test("Configured language, localized search, metadata, and local fonts", async (
 test("Spanish routes and the language switch", async ({ page, request }) => {
   const es = (key: Parameters<typeof t>[0]) => translate("es", key);
   await page.goto("/posts/welcome/");
-  await page.getByRole("link", { name: t("nav.language") }).click();
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="en"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="es"]'),
+  ).toHaveAttribute("href", /\/es\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="x-default"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  const switchToSpanish = page.getByRole("link", { name: t("nav.language") });
+  await expect(switchToSpanish).toHaveAttribute("href", "/es/posts/welcome/");
+  await switchToSpanish.click();
   await expect(page).toHaveURL(/\/es\/posts\/welcome\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
   await expect(page.locator(".article-header h1")).toContainText("Bienvenido");
   await expect(
     page.locator('link[rel="alternate"][hreflang="en"]'),
+  ).toHaveAttribute("href", /\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="es"]'),
+  ).toHaveAttribute("href", /\/es\/posts\/welcome\/$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="x-default"]'),
   ).toHaveAttribute("href", /\/posts\/welcome\/$/);
   await page.getByRole("link", { name: es("article.back") }).click();
   await expect(page).toHaveURL(/\/es\/posts\/$/);
