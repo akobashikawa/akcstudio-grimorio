@@ -18,6 +18,7 @@ import {
   type CreatePostResult,
   type PostSummary,
 } from "../../lib/github-content";
+import type { PostLanguage } from "../../lib/frontmatter";
 import PostCreator from "./PostCreator.vue";
 import PostEditor from "./PostEditor.vue";
 import PostList from "./PostList.vue";
@@ -38,6 +39,8 @@ const loadingPosts = ref(false);
 const postsError = ref("");
 const view = ref<AdminView>("list");
 const selectedPost = ref<PostSummary | null>(null);
+const createLang = ref<PostLanguage>("en");
+const listNotice = ref("");
 
 onMounted(async () => {
   const stored = loadStoredSession();
@@ -118,6 +121,7 @@ async function loadPosts() {
 async function onAuthenticated(next: AdminSession) {
   session.value = next;
   loginError.value = "";
+  listNotice.value = "";
   view.value = "list";
   selectedPost.value = null;
   await loadPosts();
@@ -129,6 +133,7 @@ function logout() {
   session.value = null;
   posts.value = [];
   postsError.value = "";
+  listNotice.value = "";
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "";
@@ -136,18 +141,22 @@ function logout() {
 }
 
 function editPost(post: PostSummary) {
+  listNotice.value = "";
   selectedPost.value = post;
   view.value = "edit";
   updateQuery(post);
 }
 
-function startCreate() {
+function startCreate(lang: PostLanguage = "en") {
+  listNotice.value = "";
+  createLang.value = lang;
   selectedPost.value = null;
   view.value = "new";
   updateQuery();
 }
 
 function backToList() {
+  listNotice.value = "";
   view.value = "list";
   selectedPost.value = null;
   updateQuery();
@@ -164,6 +173,7 @@ async function onPostCreated(result: CreatePostResult) {
   await loadPosts();
   view.value = "list";
   selectedPost.value = null;
+  listNotice.value = `Created posts/${result.lang}/${result.slug}.md.`;
   updateQuery();
 }
 
@@ -172,6 +182,7 @@ function onUnauthorized() {
   session.value = null;
   posts.value = [];
   postsError.value = "";
+  listNotice.value = "";
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "Your GitHub token expired. Connect again.";
@@ -250,15 +261,19 @@ function formatExpiration(value?: string): string {
       @authenticated="onAuthenticated"
     />
     <template v-else>
-      <PostList
-        v-if="view === 'list'"
-        :posts="posts"
-        :loading="loadingPosts"
-        :error="postsError"
-        @edit="editPost"
-        @create="startCreate"
-        @refresh="loadPosts"
-      />
+      <template v-if="view === 'list'">
+        <p v-if="listNotice" class="admin-success" role="status">
+          {{ listNotice }}
+        </p>
+        <PostList
+          :posts="posts"
+          :loading="loadingPosts"
+          :error="postsError"
+          @edit="editPost"
+          @create="startCreate"
+          @refresh="loadPosts"
+        />
+      </template>
       <PostEditor
         v-else-if="view === 'edit' && selectedPost"
         :key="`${selectedPost.lang}/${selectedPost.slug}`"
@@ -275,6 +290,7 @@ function formatExpiration(value?: string): string {
         :repo="repo"
         :token="session.token"
         :categories="categories"
+        :initial-lang="createLang"
         @created="onPostCreated"
         @back="backToList"
         @unauthorized="onUnauthorized"
@@ -337,6 +353,20 @@ function formatExpiration(value?: string): string {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+.admin-success {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #b7dcc4;
+  border-radius: var(--radius);
+  background: #eef8f1;
+  color: #22633a;
+  font-size: 14px;
+}
+:global(.dark) .admin-success {
+  border-color: #315640;
+  background: #1d2c23;
+  color: #91d3a7;
 }
 .admin-view {
   display: grid;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { PostSummary } from "../../lib/github-content";
+import type { PostLanguage } from "../../lib/frontmatter";
 
 type LanguageFilter = "all" | "en" | "es";
 
@@ -12,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   edit: [post: PostSummary];
-  create: [];
+  create: [lang: PostLanguage];
   refresh: [];
 }>();
 
@@ -45,6 +46,10 @@ const emptyMessage = computed(() =>
     ? "No posts found in the repository."
     : "No posts match the current filters.",
 );
+
+function startCreate() {
+  emit("create", language.value === "all" ? "en" : language.value);
+}
 </script>
 
 <template>
@@ -65,9 +70,7 @@ const emptyMessage = computed(() =>
         >
           Refresh
         </button>
-        <button class="btn" type="button" @click="emit('create')">
-          New post
-        </button>
+        <button class="btn" type="button" @click="startCreate">New post</button>
       </div>
     </div>
 
