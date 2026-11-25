@@ -12,6 +12,8 @@ draft: false
 ---
 Esta es una prueba.
 
+![](/covers/apolo11.jpg)
+
 ## Subtítulo
 
 Este es un *párrafo* *de prueba*.
