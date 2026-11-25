@@ -18,7 +18,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 import Navigation from "../components/header/Navigation.vue";
 import Search from "../components/header/Search.vue";
 import MainContainer from "../components/MainContainer.vue";
-import { getPosts, summarize } from "../lib/posts";
+import { getPostLanguages, getPosts, summarize } from "../lib/posts";
 type ArticleInfo = {
   id: string;
   published: Date;
@@ -51,6 +51,10 @@ const {
   noindex = false,
 } = Astro.props;
 const posts = (await getPosts(lang)).map(summarize);
+// On a post page, only languages with a published translation exist.
+const availableLanguages = article
+  ? await getPostLanguages(article.id)
+  : languages;
 const pageTitle = title
   ? `${title} · ${siteInfo.title}`
   : `${siteInfo.title} · ${siteInfo.titleSuffix}`;
@@ -192,14 +196,14 @@ const jsonLd = JSON.stringify({
     />
     <link rel="canonical" href={canonical} />
     {!noindex &&
-      languages.map((language) => (
+      availableLanguages.map((language) => (
         <link
           rel="alternate"
           hreflang={language}
           href={absolute(localizePath(language, basePath))}
         />
       ))}
-    {!noindex && (
+    {!noindex && availableLanguages.includes(defaultLanguage) && (
       <link
         rel="alternate"
         hreflang="x-default"
@@ -212,7 +216,7 @@ const jsonLd = JSON.stringify({
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={siteInfo.locale} />
-    {languages
+    {availableLanguages
       .filter((language) => language !== lang)
       .map((language) => (
         <meta
