@@ -1,14 +1,19 @@
 ---
 title: "Violence is the last refuge of the incompetent"
 description: "When we solve the wrong problem"
-date: 2026-11-24
-lang: en
-category: notes
-tags: ["SciFi", "Thinking", "Asimov"]
+date: "2026-11-24"
+updated: "2026-11-25"
+lang: "en"
+category: "notes"
+tags:
+  - "SciFi"
+  - "Thinking"
+  - "Asimov"
 featured: false
+draft: false
 ---
 
-![Violence is the last refuge of the incompetent](/covers/asimov.jfif)
+![Violence is the last refuge of the incompetent](/covers/asimov.jpg)
 
 "Violence is the last refuge of the incompetent."
 
