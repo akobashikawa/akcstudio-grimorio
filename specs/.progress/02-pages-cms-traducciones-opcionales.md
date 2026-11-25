@@ -15,7 +15,7 @@
 - [x] 4. `BaseLayout.astro`: idiomas disponibles, `hreflang`, `x-default`, `og:locale:alternate` y `languageUrl`.
 - [x] 5. `Navigation.vue`: recibir `languageUrl` como prop.
 - [x] 6. Fallback del selector al listado `/posts/` del otro idioma.
-- [ ] 7. Filtrar `links` del sitemap en `astro.config.mjs`.
+- [x] 7. Filtrar `links` del sitemap en `astro.config.mjs`.
 - [ ] 8. Actualizar `README.md`.
 - [ ] 9. Ampliar `tests/blog.spec.ts`.
 - [ ] 10. Probar Pages CMS en la rama (login, edición, imagen, post de un idioma, rename/delete).
@@ -30,12 +30,13 @@
 - Paso 3 completado y commiteado como `spec-02-step-03`: `getPostLanguages(id)` devuelve los idiomas con un post publicado para ese slug. `pnpm check` pasa.
 - Paso 4 completado y commiteado como `spec-02-step-04`: `BaseLayout` limita `hreflang`, `x-default` y `og:locale:alternate` a idiomas publicados. El paso de `languageUrl` a `Navigation` se movió al paso 5 porque `astro check` rechaza la prop antes de declararla.
 - Paso 5 completado y commiteado como `spec-02-step-05`: `Navigation` recibe `languageUrl` y `BaseLayout` la calcula con la ruta actual.
-- Paso 6 completado (sin commitear): si no existe traducción publicada, el selector va al listado `/posts/` del otro idioma.
+- Paso 6 completado y commiteado como `spec-02-step-06`: si no existe traducción publicada, el selector va al listado `/posts/` del otro idioma.
+- Paso 7 completado (sin commitear): el sitemap filtra los `links` alternativos contra las páginas publicadas reales.
 - El árbol de trabajo estaba limpio al crear la rama.
 
 ## Siguiente acción
 
-Pedir confirmación para empezar el paso 1. Para retomar:
+Commitear el paso 7 y continuar con el paso 8 (`README.md`). Para retomar:
 
 ```text
 /spec-impl 02-pages-cms-traducciones-opcionales
