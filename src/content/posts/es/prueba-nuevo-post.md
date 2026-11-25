@@ -4,7 +4,7 @@ description: Descripción pendiente.
 date: 2026-11-24
 updated: 2026-11-24
 lang: es
-category: notes
+category: guides
 tags:
   - Test
 featured: false
