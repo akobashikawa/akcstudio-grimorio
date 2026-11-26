@@ -7,27 +7,21 @@ date: 2026-11-26
 lang: es
 category: guides
 tags:
-  - DevOps
-  - GitHub
-  - Vercel
-  - Neon
+  - devops
+  - github-apps
+  - vercel
+  - neon
+  - pages-cms
+  - jamstack
 featured: false
 draft: false
 ---
----
-title: "Runbook: Cómo desplegar Pages CMS self-hosted gratis con Vercel, Neon y GitHub"
-description: "Guía paso a paso para levantar tu propia instancia de Pages CMS conectada a Postgres en Neon y Vercel, esquivando los errores típicos de permisos en GitHub Apps."
-pubDate: 2026-11-26
-tags: ["pages-cms", "vercel", "neon", "github-apps", "jamstack", "devops"]
----
-
 Editar sitios estáticos (Astro, Hugo, Jekyll o Eleventy) directamente desde archivos Markdown en Git es cómodo cuando estás frente a tu editor de código, pero se vuelve pesado cuando solo quieres corregir un párrafo desde el teléfono o dejar que otra persona publique contenido sin tocar Git.
 
 **Pages CMS** resuelve esto poniendo una interfaz visual limpia encima de tus repositorios, guardando cada cambio como un *commit* estándar. Aunque existe una instancia pública gratuita (`app.pagescms.org`), levantar tu propia instancia *self-hosted* te da control total sobre los permisos de tus repositorios, privacidad sobre tus tokens y la libertad de mantener tu propio *fork*.
 
 Este *runbook* documenta el despliegue completo usando el nivel gratuito de **Vercel**, **Neon** y una **GitHub App**, incluyendo las fricciones reales que aparecen en el camino y cómo resolverlas.
 
----
 
 ## Arquitectura del despliegue
 
@@ -35,7 +29,7 @@ A diferencia de otros CMS basados en Git que solo usan OAuth en el navegador, Pa
 
 ```text
 +-------------+       HTTPS / OAuth       +---------------------------+
-|   Usuario   | ------------------------> |    Vercel (Next.js App)   |
+| Usuario | ------------------------> | Vercel (Next.js App) |
 +-------------+                           |  Better Auth + AES-256    |
                                           +-------------+-------------+
                                                         |
@@ -43,13 +37,13 @@ A diferencia de otros CMS basados en Git que solo usan OAuth en el navegador, Pa
                          | SQL (Pooler SSL)                                            | GitHub API + Webhooks
                          v                                                             v
           +-----------------------------+                               +-----------------------------+
-          |       Neon (Postgres)       |                               |         GitHub App          |
-          |  Sesiones y tokens cifrados |                               |  Permisos por repositorio   |
+| Neon (Postgres) |  | GitHub App |
+| Sesiones y tokens cifrados |  | Permisos por repositorio |
           +-----------------------------+                               +--------------+--------------+
                                                                                        |
                                                                                        v
                                                                         +-----------------------------+
-                                                                        |   Tus repositorios (.md)    |
+| Tus repositorios (.md) |
                                                                         +-----------------------------+
 ```
 
@@ -116,8 +110,8 @@ Aunque puedes desplegar este proyecto en cualquier entorno Node.js o Docker, **V
 
 ## Prerrequisitos
 
-* Una cuenta en **GitHub**, **Vercel** y **Neon**.
-* Una terminal con `openssl` y Node.js disponible (Linux, macOS, WSL2 o Git Bash en Windows) para generar claves criptográficas y correr la migración inicial de tablas.
+- Una cuenta en **GitHub**, **Vercel** y **Neon**.
+- Una terminal con `openssl` y Node.js disponible (Linux, macOS, WSL2 o Git Bash en Windows) para generar claves criptográficas y correr la migración inicial de tablas.
 
 ---
 
@@ -140,20 +134,21 @@ Pages CMS almacena usuarios, sesiones y tokens de instalación cifrados en Postg
 
 1. Crea un proyecto nuevo en [Neon](https://neon.tech).
 2. En el dashboard del proyecto, copia la cadena de conexión **Pooled connection** (`DATABASE_URL`). Tendrá una forma similar a esta:
-   ```text
+  ```text
    postgresql://neondb_owner:TU_PASSWORD@ep-cool-frog-123456-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
-   ```
+  ```
 3. Antes del primer inicio de sesión, crea el esquema de tablas en Neon desde una copia local de tu *fork*:
-   ```bash
+  ```bash
    git clone [https://github.com/tu-usuario/pagescms.git](https://github.com/tu-usuario/pagescms.git)
    cd pagescms
    npm install
-   ```
+  ```
 4. Crea un archivo `.env` temporal solo con `DATABASE_URL` y ejecuta la migración:
-   ```bash
+  ```bash
    echo 'DATABASE_URL="postgresql://neondb_owner:TU_PASSWORD@ep-cool-frog-123456-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"' > .env
    npm run db:migrate
-   ```
+  ```
+
    *(Si el script falla o no existe en tu versión del fork, ejecuta `npx drizzle-kit migrate`).*
 
 > **Verificación:** Abre el panel **Tables** o el **SQL Editor** en la consola de Neon y comprueba que existan las tablas `user`, `session`, `account` y `github_installation`. Borra el archivo `.env` local cuando termines.
@@ -184,29 +179,27 @@ En lugar de una OAuth App clásica, Pages CMS requiere crear una **GitHub App**.
 
 1. En GitHub, ve a **Settings** (de tu perfil) → **Developer settings** → **GitHub Apps** → **New GitHub App**.
 2. Completa los datos básicos:
-   * **GitHub App name:** un nombre único en todo GitHub (ejemplo: `mi-pagescms`).
-   * **Homepage URL:** `https://mi-pagescms.vercel.app`
+  - **GitHub App name:** un nombre único en todo GitHub (ejemplo: `mi-pagescms`).
+  - **Homepage URL:** `https://mi-pagescms.vercel.app`
 3. En la sección **Identifying and authorizing users**:
-   * **Redirect URI** *(antes llamado Callback URL)*:
-     ```text
-     [https://mi-pagescms.vercel.app/api/auth/callback/github](https://mi-pagescms.vercel.app/api/auth/callback/github)
-     ```
-   * **Request user authorization (OAuth) during installation:** déjalo **desmarcado**.
+  - **Redirect URI** *(antes llamado Callback URL)*:
+  - **Request user authorization (OAuth) during installation:** déjalo **desmarcado**.
 4. En **Post installation**:
-   * **Setup URL (optional):** déjalo **en blanco** (o pon `https://mi-pagescms.vercel.app` y marca *Redirect on update* si quieres volver automático al panel cada vez que autorices un repositorio nuevo).
+  - **Setup URL (optional):** déjalo **en blanco** (o pon `https://mi-pagescms.vercel.app` y marca *Redirect on update* si quieres volver automático al panel cada vez que autorices un repositorio nuevo).
 5. En **Webhook**:
-   * Marca **Active**.
-   * **Webhook URL:** `https://mi-pagescms.vercel.app/api/webhook/github`
-   * **Webhook secret:** genera otro secreto de 64 caracteres con `openssl rand -hex 32` y pégalo aquí.
+  - Marca **Active**.
+  - **Webhook URL:** `https://mi-pagescms.vercel.app/api/webhook/github`
+  - **Webhook secret:** genera otro secreto de 64 caracteres con `openssl rand -hex 32` y pégalo aquí.
 6. En **Permissions & events** configura tres puntos clave:
-   * **Repository permissions → Contents:** selecciona **Read and write** (`Metadata` pasará a *Read-only* automáticamente).
-   * **Account permissions → Email addresses:** selecciona **Read-only**. *(Paso crítico: sin este permiso, GitHub oculta tu correo y el inicio de sesión fallará).*
-   * **Subscribe to events:** marca **Push**.
+  - **Repository permissions → Contents:** selecciona **Read and write** (`Metadata` pasará a *Read-only* automáticamente).
+  - **Account permissions → Email addresses:** selecciona **Read-only**. *(Paso crítico: sin este permiso, GitHub oculta tu correo y el inicio de sesión fallará).*
+  - **Subscribe to events:** marca **Push**.
 7. En **Where can this GitHub App be installed?**, marca **Only on this account** y pulsa **Create GitHub App**.
 
 Una vez creada la aplicación, en su pestaña **General**:
-* Pulsa **Generate a new client secret** y guarda el valor resultante.
-* Baja hasta **Private keys**, pulsa **Generate a private key** y guarda el archivo `.pem` que se descarga.
+
+- Pulsa **Generate a new client secret** y guarda el valor resultante.
+- Baja hasta **Private keys**, pulsa **Generate a private key** y guarda el archivo `.pem` que se descarga.
 
 > **Verificación:** En el menú **Permissions & events** de tu GitHub App deben aparecer `Contents: Read and write` en permisos de repositorio y `Email addresses: Read-only` en permisos de cuenta.
 
@@ -218,9 +211,9 @@ Una vez creada la aplicación, en su pestaña **General**:
 
 Al desplegar un proyecto en Vercel verás tres dominios distintos en la pestaña **Deployments**:
 
-* `https://mi-pagescms.vercel.app`: **Dominio de Producción**. Es fijo y siempre apunta al último despliegue estable de tu rama `main`.
-* `https://pagescms-git-main-usuario.vercel.app`: **Dominio de Rama**. Se actualiza con cada *push* a `main`.
-* `https://pagescms-abc123xyz-usuario.vercel.app`: **URL del Deployment**. Es inmutable y queda congelada en esa compilación específica.
+- `https://mi-pagescms.vercel.app`: **Dominio de Producción**. Es fijo y siempre apunta al último despliegue estable de tu rama `main`.
+- `https://pagescms-git-main-usuario.vercel.app`: **Dominio de Rama**. Se actualiza con cada *push* a `main`.
+- `https://pagescms-abc123xyz-usuario.vercel.app`: **URL del Deployment**. Es inmutable y queda congelada en esa compilación específica.
 
 Usa **siempre** el Dominio de Producción (`https://mi-pagescms.vercel.app`) y **sin barra diagonal (`/`) al final** para configurar `BASE_URL`.
 
@@ -228,8 +221,9 @@ Usa **siempre** el Dominio de Producción (`https://mi-pagescms.vercel.app`) y *
 
 Ve en Vercel a **Settings → Environment Variables** y agrega las 10 variables siguientes marcadas para **Production**:
 
+
 | Variable | Valor / Origen |
-| :--- | :--- |
+| --------------------------- | ----------------------------------------------------------------------- |
 | `DATABASE_URL` | Tu cadena de conexión *pooler* de Neon. |
 | `BASE_URL` | `https://mi-pagescms.vercel.app` (sin `/` al final). |
 | `BETTER_AUTH_SECRET` | La clave en Base64 generada en la Fase 3. |
@@ -240,6 +234,7 @@ Ve en Vercel a **Settings → Environment Variables** y agrega las 10 variables 
 | `GITHUB_APP_CLIENT_SECRET` | El *client secret* que generaste en la Fase 4. |
 | `GITHUB_APP_PRIVATE_KEY` | Todo el contenido del archivo `.pem` (incluyendo `BEGIN` y `END`). |
 | `GITHUB_APP_WEBHOOK_SECRET` | El secreto hexadecimal que pusiste en el campo Webhook secret. |
+
 
 ### Redesplegar e instalar la App
 
@@ -300,13 +295,17 @@ Al guardar este archivo en la rama principal de tu sitio, Pages CMS habilitará 
 ## Trampas reales y cómo resolverlas
 
 ### 1. Toast de error `email_not_found` al pulsar "Sign in with GitHub"
-* **Causa:** A diferencia de las OAuth Apps tradicionales, las GitHub Apps bloquean el acceso al correo del usuario por defecto. Cuando Better Auth intenta crear tu cuenta en Postgres y no recibe un email, aborta el inicio de sesión.
-* **Solución:** Verifica que en **Developer settings → GitHub Apps → Permissions & events → Account permissions** hayas puesto **Email addresses** en **Read-only**. Si agregaste ese permiso *después* de haber instalado la app, ve a **Settings → Applications → Installed GitHub Apps → Configure** y acepta la solicitud pendiente de nuevos permisos (*Accept new permissions*).
+
+- **Causa:** A diferencia de las OAuth Apps tradicionales, las GitHub Apps bloquean el acceso al correo del usuario por defecto. Cuando Better Auth intenta crear tu cuenta en Postgres y no recibe un email, aborta el inicio de sesión.
+- **Solución:** Verifica que en **Developer settings → GitHub Apps → Permissions & events → Account permissions** hayas puesto **Email addresses** en **Read-only**. Si agregaste ese permiso *después* de haber instalado la app, ve a **Settings → Applications → Installed GitHub Apps → Configure** y acepta la solicitud pendiente de nuevos permisos (*Accept new permissions*).
 
 ### 2. El código de 6 dígitos por correo nunca llega
-* **Causa:** La pantalla de login incluye un campo para entrar con código OTP por email, pero Pages CMS utiliza **Resend** (`RESEND_API_KEY`) para enviar esos mensajes. Si no configuraste esa variable, el envío queda deshabilitado.
-* **Solución:** No necesitas configurar correo transaccional si usas GitHub; ignora el campo de email y entra siempre mediante el botón **Sign in with GitHub**.
+
+- **Causa:** La pantalla de login incluye un campo para entrar con código OTP por email, pero Pages CMS utiliza **Resend** (`RESEND_API_KEY`) para enviar esos mensajes. Si no configuraste esa variable, el envío queda deshabilitado.
+- **Solución:** No necesitas configurar correo transaccional si usas GitHub; ignora el campo de email y entra siempre mediante el botón **Sign in with GitHub**.
 
 ### 3. Error 500 o sesión inválida tras configurar las variables
-* **Causa:** Suele deberse a tres detalles: olvidar hacer **Redeploy** en Vercel después de guardar las variables, dejar una barra diagonal `/` al final de `BASE_URL`, o pegar un `CRYPTO_KEY` que no mide exactamente 64 caracteres hexadecimales.
-* **Solución:** Revisa `BASE_URL` y `CRYPTO_KEY` en Vercel y lanza un nuevo **Redeploy**.
+
+- **Causa:** Suele deberse a tres detalles: olvidar hacer **Redeploy** en Vercel después de guardar las variables, dejar una barra diagonal `/` al final de `BASE_URL`, o pegar un `CRYPTO_KEY` que no mide exactamente 64 caracteres hexadecimales.
+- **Solución:** Revisa `BASE_URL` y `CRYPTO_KEY` en Vercel y lanza un nuevo **Redeploy**.
+
