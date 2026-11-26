@@ -179,6 +179,9 @@ onUnmounted(() => window.removeEventListener("popstate", readUrl));
             height="480"
             loading="lazy"
         /></a>
+        <div v-else class="cover-link cover-placeholder" aria-hidden="true">
+          <span class="icon-[lucide--book-open]"></span>
+        </div>
         <div class="post-info">
           <div class="post-kicker">
             <span v-if="post.featured" class="pin"
@@ -338,6 +341,20 @@ onUnmounted(() => window.removeEventListener("popstate", readUrl));
   min-height: 150px;
   object-fit: cover;
   display: block;
+}
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 44px;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 14px,
+      color-mix(in srgb, var(--accent) 8%, transparent) 14px 28px
+    ),
+    var(--accent-soft);
+  border: 1px solid var(--line);
 }
 .post-info {
   padding: 16px 20px 14px;
@@ -515,6 +532,9 @@ onUnmounted(() => window.removeEventListener("popstate", readUrl));
     min-height: 140px;
     aspect-ratio: 1200 / 480;
     height: auto;
+  }
+  .cover-placeholder {
+    display: none;
   }
   .post-info {
     padding: 14px;
