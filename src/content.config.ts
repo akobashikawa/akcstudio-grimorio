@@ -17,7 +17,8 @@ const posts = defineCollection({
       (value) => (typeof value === "string" ? normalizeCategory(value) : value),
       z.enum(categoryNames),
     ),
-    tags: z.array(z.string().trim().min(1)),
+    // Editors (Pages CMS) may omit the field when empty; [] keeps the build green.
+    tags: z.array(z.string().trim().min(1)).default([]),
     featured: z.boolean().default(false),
     draft: z.boolean().default(false),
   }),

@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: false
+  # Pages CMS saves a new post with two commits; only the last one matters.
+  cancel-in-progress: true
 
 env:
   SITE_URL: ${{ vars.SITE_URL || 'https://akcstudio-grimorio.akobashikawa.workers.dev' }}

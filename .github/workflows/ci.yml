@@ -7,6 +7,12 @@ on:
 permissions:
   contents: read
 
+# Pages CMS saves a new post with two commits (add + update); cancel the
+# superseded run so only the final commit is verified.
+concurrency:
+  group: quality-checks-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest

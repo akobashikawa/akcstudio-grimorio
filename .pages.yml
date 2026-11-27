@@ -61,11 +61,13 @@ content:
             default: en
           - name: category
             type: select
+            required: true
             options:
               values: [guides, notes, stories]
           - name: tags
             type: string
             list: true
+            default: []
           - name: featured
             type: boolean
             default: false
@@ -120,11 +122,13 @@ content:
             default: es
           - name: category
             type: select
+            required: true
             options:
               values: [guides, notes, stories]
           - name: tags
             type: string
             list: true
+            default: []
           - name: featured
             type: boolean
             default: false
