@@ -114,6 +114,10 @@ type ContentsPutResponse = {
   commit: { sha: string };
 };
 
+type ContentsDeleteResponse = {
+  commit: { sha: string };
+};
+
 type RepoResponse = {
   permissions?: { push?: boolean };
 };
@@ -124,6 +128,13 @@ type UserResponse = {
 
 type GitObjectResponse = {
   sha: string;
+};
+
+export type DeletePostResult = {
+  lang: PostLanguage;
+  slug: string;
+  path: string; // src/content/posts/{lang}/{slug}.md
+  commitSha: string;
 };
 
 export function isValidSlug(slug: string): boolean {
@@ -417,6 +428,53 @@ export async function createPost(
     slug: input.slug,
     path,
     sha: response.content.sha,
+    commitSha: response.commit.sha,
+  };
+}
+
+/**
+ * Delete a single post file. DELETE needs the current blob sha, so the file is
+ * read first; a 404 on that read means the post is already gone and is
+ * surfaced as a GithubApiError(404) for the caller to treat as success.
+ */
+export async function deletePost(
+  config: AdminRepoConfig,
+  token: string,
+  lang: PostLanguage,
+  slug: string,
+): Promise<DeletePostResult> {
+  const path = postPath(lang, slug);
+  const file = await githubFetch(
+    contentsPath(config, path),
+    token,
+    {},
+    { allowNotFound: true },
+  );
+  if (file.status === 404) {
+    throw new GithubApiError(
+      404,
+      `posts/${lang}/${slug}.md does not exist (it was already deleted).`,
+    );
+  }
+  const { sha } = (await file.json()) as ContentsFile;
+
+  const response = await githubJson<ContentsDeleteResponse>(
+    `${repoPath(config)}/contents/${path}`,
+    token,
+    {
+      method: "DELETE",
+      body: JSON.stringify({
+        message: `cms: delete posts/${lang}/${slug}.md`,
+        sha,
+        branch: config.branch,
+      }),
+    },
+  );
+
+  return {
+    lang,
+    slug,
+    path,
     commitSha: response.commit.sha,
   };
 }
