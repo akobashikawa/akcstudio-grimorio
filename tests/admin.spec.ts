@@ -400,6 +400,7 @@ test("List deletes a post after confirmation", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText(
     "Deleted posts/en/welcome.md.",
   );
+  await expect(page).toHaveURL(/\/admin\/$/);
   await expect(
     page.getByRole("heading", { name: "Posts", exact: true }),
   ).toBeVisible();
@@ -491,6 +492,49 @@ test("Editor deletes the post and returns to the list", async ({ page }) => {
   ).toBeVisible();
   expect(deletes).toHaveLength(1);
   expect(deletes[0].sha).toBe("file-sha");
+});
+
+test("List sends an expired session to the login card", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "DELETE") {
+      return route.fulfill({ status: 401, headers: CORS, body: "{}" });
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete post en/welcome" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Connect with GitHub", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem("grimorio.admin")),
+  ).toBeNull();
 });
 
 async function missingTranslation404(page: Page): Promise<string> {
