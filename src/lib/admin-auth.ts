@@ -70,7 +70,11 @@ type TokenResponse = {
   error_description?: string;
 };
 
-export function authorizeUrl(env: AdminAuthEnv, origin: string, state: string): string {
+export function authorizeUrl(
+  env: AdminAuthEnv,
+  origin: string,
+  state: string,
+): string {
   const params = new URLSearchParams({
     client_id: env.GITHUB_APP_CLIENT_ID,
     // Trailing slash: GitHub redirects to the registered callback URL exactly,
@@ -109,7 +113,9 @@ async function tokenRequest(
   const data = (await response.json()) as TokenResponse;
   if (!data.access_token) {
     throw new Error(
-      data.error_description || data.error || "GitHub did not return an access token.",
+      data.error_description ||
+        data.error ||
+        "GitHub did not return an access token.",
     );
   }
   return {

@@ -14,8 +14,7 @@ const href = `/admin/?lang=${encodeURIComponent(props.lang)}&slug=${encodeURICom
 
 onMounted(() => {
   try {
-    signedIn.value =
-      localStorage.getItem(ADMIN_STORAGE_KEYS.signedIn) === "1";
+    signedIn.value = localStorage.getItem(ADMIN_STORAGE_KEYS.signedIn) === "1";
   } catch {
     signedIn.value = false;
   }

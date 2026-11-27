@@ -79,8 +79,7 @@ const missingPostIndexJson = JSON.stringify(missingPostIndex).replace(
         const slug = match[2];
         let signedIn = false;
         try {
-          signedIn =
-            localStorage.getItem(ADMIN_STORAGE_KEYS.signedIn) === "1";
+          signedIn = localStorage.getItem(ADMIN_STORAGE_KEYS.signedIn) === "1";
         } catch {
           signedIn = false;
         }

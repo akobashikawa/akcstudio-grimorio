@@ -15,15 +15,13 @@ export const GET: APIRoute = async (context) => {
   }
 
   const state = crypto.randomUUID();
-  const previous = await context.session.get<AdminSessionData>(ADMIN_SESSION_KEY);
+  const previous =
+    await context.session.get<AdminSessionData>(ADMIN_SESSION_KEY);
   context.session.set(ADMIN_SESSION_KEY, {
     ...previous,
     oauthState: state,
     oauthNext: isAdminNextPath(context.url.searchParams.get("next")),
   });
 
-  return Response.redirect(
-    authorizeUrl(env, context.url.origin, state),
-    302,
-  );
+  return Response.redirect(authorizeUrl(env, context.url.origin, state), 302);
 };

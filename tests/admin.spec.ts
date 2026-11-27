@@ -29,11 +29,7 @@ const SESSION_PAYLOAD = {
   canWrite: true,
 };
 
-const stubSession = (
-  page: Page,
-  payload: unknown,
-  status = 200,
-): void => {
+const stubSession = (page: Page, payload: unknown, status = 200): void => {
   page.route("**/api/auth/session/", (route) =>
     route.fulfill({
       status,
@@ -122,8 +118,8 @@ test("Admin loads the list with a session and purges legacy keys", async ({
     await page.evaluate(() => localStorage.getItem("grimorio.github.token")),
   ).toBeNull();
   expect(
-    await page.evaluate(
-      () => localStorage.getItem("grimorio.github.writeVerified"),
+    await page.evaluate(() =>
+      localStorage.getItem("grimorio.github.writeVerified"),
     ),
   ).toBeNull();
 });

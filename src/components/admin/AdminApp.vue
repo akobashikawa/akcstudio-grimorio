@@ -314,11 +314,7 @@ function formatExpiration(expiresAt: number): string {
     </header>
 
     <p v-if="loading" class="admin-hint">Checking session...</p>
-    <LoginCard
-      v-else-if="!session"
-      :repo="repo"
-      :initial-error="loginError"
-    />
+    <LoginCard v-else-if="!session" :repo="repo" :initial-error="loginError" />
     <template v-else>
       <template v-if="view === 'list'">
         <p v-if="listNotice" class="admin-success" role="status">

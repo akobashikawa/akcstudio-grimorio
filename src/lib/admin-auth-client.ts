@@ -20,9 +20,9 @@ export async function fetchSession(): Promise<AdminSessionPayload | null> {
   });
   if (response.status === 401) return null;
   if (!response.ok) {
-    const data = (await response.json().catch(() => null)) as
-      | { message?: string }
-      | null;
+    const data = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
     throw new Error(
       data?.message ?? `Session request failed (${response.status}).`,
     );

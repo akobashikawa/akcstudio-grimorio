@@ -21,7 +21,8 @@ export const GET: APIRoute = async (context) => {
   const params = context.url.searchParams;
   const code = params.get("code");
   const state = params.get("state");
-  const pending = await context.session.get<AdminSessionData>(ADMIN_SESSION_KEY);
+  const pending =
+    await context.session.get<AdminSessionData>(ADMIN_SESSION_KEY);
 
   if (!code || !state || !pending || pending.oauthState !== state) {
     return Response.json({ error: "invalid_state" }, { status: 403 });

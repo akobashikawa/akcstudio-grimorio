@@ -148,14 +148,22 @@ Pages CMS commits to the selected branch and triggers the normal deploy workflow
 
 The site also includes a browser editor at `/admin/`. It is not linked from the public navigation and is marked `noindex`. Use Pages CMS if you need image uploads or a visual editor.
 
-1. Open `/admin/`.
-2. Create a GitHub fine-grained personal access token with **Contents: Read and write** access to this repository. The token creation link prefills the name, a 90-day expiration and the Contents permission.
-3. Under **Repository access**, choose **Only select repositories** and select this repository. GitHub cannot preselect that step from the link.
-4. Paste the token into the admin page. It is stored only in this browser's `localStorage` and is sent only to `api.github.com`.
+The admin authenticates through a GitHub App and a server session: no GitHub token is stored in the browser, and clearing `localStorage` does not log you out.
+
+1. Register the GitHub App (Settings → Developer settings → GitHub Apps). Name: `akcstudio-grimorio-admin`.
+   - **Callback URL**: `https://<domain>/api/auth/callback/` and `http://localhost:4321/api/auth/callback/`. The trailing slash is required: the site uses `trailingSlash: "always"` and GitHub redirects to the registered URL exactly.
+   - Permissions: **Contents: Read and write** and **Metadata: Read-only**.
+   - Check **Expire user authorization tokens**; it provides the 8-hour access token and the 6-month refresh token the session renews automatically.
+   - Install it on **Only select repositories** → `akcstudio-grimorio`.
+2. Store the app credentials as Cloudflare secrets: `npx wrangler secret put GITHUB_APP_CLIENT_ID` and `npx wrangler secret put GITHUB_APP_CLIENT_SECRET`.
+3. For local development, create a `.dev.vars` file at the root (already gitignored) with the same two variables; `astro dev` reads it through the Cloudflare Vite plugin.
+4. Open `/admin/` and press **Connect with GitHub**. The session lives in the Worker (KV binding `SESSION`) behind an `httpOnly` cookie and lasts 90 days; the browser only ever receives an 8-hour access token, kept in memory.
 
 The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, and show a preview. **New post** creates a single file in the language you choose: enter the title, description, body and metadata, use **Generate from title** if you want the slug derived automatically, and create the post as a draft. To translate a post, create the same slug in the other language. Every save and creation commits directly to `master` and triggers the normal deploy workflow.
 
-If a post exists only in one language and you open its URL under the other language while a token is stored in this browser, the 404 page shows a button to create the missing version. The form opens prefilled with the original title, description, date, category, tags, featured flag and body, and always starts as a draft so you can translate it before publishing.
+If a post exists only in one language and you open its URL under the other language while signed in, the 404 page shows a button to create the missing version. The form opens prefilled with the original title, description, date, category, tags, featured flag and body, and always starts as a draft so you can translate it before publishing.
+
+**Log out** destroys the server session and revokes the GitHub authorization as a best-effort. Deleting the site cookies also ends the session.
 
 Limitations:
 
@@ -163,12 +171,14 @@ Limitations:
 - Posts cannot be deleted or renamed, and the slug is fixed after creation. Use Pages CMS for that.
 - The preview is approximate and does not render Astro-specific components or directives.
 - The interface is English-only.
-- The 404 shortcut only appears in the browser where the GitHub token is stored.
-- The token lives in the browser. Use a short expiration, grant access only to this repository, and revoke the token from GitHub if it is exposed.
+- The 404 shortcut only appears in browsers where you signed in (a non-secret `grimorio.admin` flag; the session itself is what authorizes anything).
+- The browser holds no GitHub credential. If you suspect misuse, revoke the app authorization under Settings → Applications → Authorized GitHub Apps.
 
 The admin still produces ordinary Markdown files, so `pnpm check` validates the frontmatter and `lang` during the deploy build.
 
-If the admin reports **GitHub denied access**, the token can read the repository but cannot write to it. Create a new fine-grained token with **Contents: Read and write** and select this repository under **Only select repositories**. Classic tokens need the `repo` scope. Logging in now performs a small write-capability check before storing the token. If the token is correct, also check that `master` does not block direct pushes.
+If the admin reports **GitHub denied access**, the session is valid but cannot write to the repository. Check that the GitHub App is installed on this repository with **Contents: Read and write** and that your account has write access. If the admin reports that the token was rejected, also check that `master` does not block direct pushes.
+
+> The previous flow used a fine-grained personal access token (`AKC Studio Grimorio admin`) pasted into the browser and stored in `localStorage`. That flow is gone; revoke any token you created for it.
 
 ### Adding a project
 
