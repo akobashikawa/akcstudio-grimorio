@@ -176,11 +176,7 @@ function confirmDelete(post: PostSummary) {
             >
               Delete
             </button>
-            <button
-              class="btn secondary"
-              type="button"
-              @click="cancelDelete"
-            >
+            <button class="btn secondary" type="button" @click="cancelDelete">
               Cancel
             </button>
           </div>

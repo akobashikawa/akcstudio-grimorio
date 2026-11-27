@@ -192,9 +192,7 @@ async function removePost(post: PostSummary) {
       return;
     }
     postsError.value =
-      reason instanceof Error
-        ? reason.message
-        : "Could not delete the post.";
+      reason instanceof Error ? reason.message : "Could not delete the post.";
   } finally {
     deleting.value = false;
   }

@@ -161,6 +161,8 @@ The admin authenticates through a GitHub App and a server session: no GitHub tok
 
 The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, and show a preview. **New post** creates a single file in the language you choose: enter the title, description, body and metadata, use **Generate from title** if you want the slug derived automatically, and create the post as a draft. To translate a post, create the same slug in the other language. Every save and creation commits directly to `master` and triggers the normal deploy workflow.
 
+**Delete post** removes a post from the trash icon in the list or from the editor. The first click shows the exact file path (`src/content/posts/{lang}/{slug}.md`); the second one commits `cms: delete posts/{lang}/{slug}.md`. Only the file you confirm is deleted — a translation of the same slug in the other language stays untouched, and the content lives on in the Git history if you change your mind. If the post is already gone, the admin reports it instead of failing.
+
 If a post exists only in one language and you open its URL under the other language while signed in, the 404 page shows a button to create the missing version. The form opens prefilled with the original title, description, date, category, tags, featured flag and body, and always starts as a draft so you can translate it before publishing.
 
 **Log out** destroys the server session and revokes the GitHub authorization as a best-effort. Deleting the site cookies also ends the session.
@@ -168,7 +170,7 @@ If a post exists only in one language and you open its URL under the other langu
 Limitations:
 
 - There is no image upload. Reference files that already exist under `public/`.
-- Posts cannot be deleted or renamed, and the slug is fixed after creation. Use Pages CMS for that.
+- Posts cannot be renamed, and the slug is fixed after creation. Use Pages CMS for that.
 - The preview is approximate and does not render Astro-specific components or directives.
 - The interface is English-only.
 - The 404 shortcut only appears in browsers where you signed in (a non-secret `grimorio.admin` flag; the session itself is what authorizes anything).
