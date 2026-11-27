@@ -77,6 +77,7 @@ export type AdminSessionData = {
   refreshToken: string;
   refreshExpiresAt: number; // epoch ms
   oauthState?: string; // solo durante el login; se borra en el callback
+  oauthNext?: string; // ruta de retorno whitelistada; se fija en el login y se usa en el callback
 };
 ```
 

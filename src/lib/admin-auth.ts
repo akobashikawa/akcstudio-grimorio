@@ -34,6 +34,8 @@ export type AdminSessionData = {
   refreshExpiresAt: number;
   /** Anti-CSRF nonce, set by /api/auth/login and cleared on /callback. */
   oauthState?: string;
+  /** Whitelisted return path, saved by /api/auth/login and used on /callback. */
+  oauthNext?: string;
 };
 
 export type AdminSessionPayload = {
