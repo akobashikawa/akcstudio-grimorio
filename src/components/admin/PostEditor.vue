@@ -25,7 +25,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  saved: [post: PostSummary];
+  saved: [post: PostSummary, commitSha: string];
   back: [];
   unauthorized: [];
   delete: [post: PostSummary];
@@ -165,16 +165,20 @@ async function save() {
     sha.value = result.sha;
     form.updated = result.frontmatter.updated ?? "";
     savedMessage.value = `Saved. Commit ${result.commitSha.slice(0, 7)}.`;
-    emit("saved", {
-      lang: props.post.lang,
-      slug: props.post.slug,
-      title: result.frontmatter.title,
-      date: result.frontmatter.date,
-      category: result.frontmatter.category,
-      draft: result.frontmatter.draft,
-      updated: result.frontmatter.updated,
-      sha: result.sha,
-    });
+    emit(
+      "saved",
+      {
+        lang: props.post.lang,
+        slug: props.post.slug,
+        title: result.frontmatter.title,
+        date: result.frontmatter.date,
+        category: result.frontmatter.category,
+        draft: result.frontmatter.draft,
+        updated: result.frontmatter.updated,
+        sha: result.sha,
+      },
+      result.commitSha,
+    );
   } catch (reason) {
     if (reason instanceof GithubApiError && reason.status === 401) {
       emit("unauthorized");

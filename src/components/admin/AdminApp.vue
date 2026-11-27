@@ -238,11 +238,12 @@ function backToList() {
   updateQuery();
 }
 
-function onPostSaved(updated: PostSummary) {
+function onPostSaved(updated: PostSummary, commitSha: string) {
   selectedPost.value = updated;
   posts.value = posts.value.map((post) =>
     post.lang === updated.lang && post.slug === updated.slug ? updated : post,
   );
+  trackDeploy(commitSha);
 }
 
 async function removePost(post: PostSummary) {
