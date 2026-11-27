@@ -1,6 +1,6 @@
 # SPEC 04 — Sesión de GitHub App en `/admin/` sin PAT en el navegador
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 01, SPEC 03
 > **Date:** 2026-11-27
 > **Objective:** Sustituir el PAT guardado en `localStorage` por una sesión de GitHub App mantenida en el Worker del sitio, para que `/admin/` sobreviva al borrado de `localStorage` sin volver a pegar ningún token.
