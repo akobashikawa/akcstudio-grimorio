@@ -53,6 +53,14 @@ export type GitHubTokens = {
   refreshExpiresAt?: number;
 };
 
+/** Tokens of the initial grant: both token kinds are mandatory here. */
+export type AdminTokens = {
+  accessToken: string;
+  accessExpiresAt: number;
+  refreshToken: string;
+  refreshExpiresAt: number;
+};
+
 type TokenResponse = {
   access_token?: string;
   expires_in?: number;
@@ -65,7 +73,9 @@ type TokenResponse = {
 export function authorizeUrl(env: AdminAuthEnv, origin: string, state: string): string {
   const params = new URLSearchParams({
     client_id: env.GITHUB_APP_CLIENT_ID,
-    redirect_uri: `${origin}/api/auth/callback`,
+    // Trailing slash: GitHub redirects to the registered callback URL exactly,
+    // and Astro is configured with `trailingSlash: "always"`.
+    redirect_uri: `${origin}/api/auth/callback/`,
     state,
   });
   return `${GITHUB_HOST}/login/oauth/authorize?${params.toString()}`;
@@ -113,12 +123,23 @@ async function tokenRequest(
 }
 
 /** Exchange the OAuth `code` from /api/auth/callback for user tokens. */
-export function exchangeCode(
+export async function exchangeCode(
   env: AdminAuthEnv,
   code: string,
   redirectUri: string,
-): Promise<GitHubTokens> {
-  return tokenRequest(env, { code, redirect_uri: redirectUri });
+): Promise<AdminTokens> {
+  const tokens = await tokenRequest(env, { code, redirect_uri: redirectUri });
+  if (!tokens.refreshToken || tokens.refreshExpiresAt === undefined) {
+    throw new Error(
+      "GitHub did not return a refresh token. Enable 'Expire user authorization tokens' on the GitHub App.",
+    );
+  }
+  return {
+    accessToken: tokens.accessToken,
+    accessExpiresAt: tokens.accessExpiresAt,
+    refreshToken: tokens.refreshToken,
+    refreshExpiresAt: tokens.refreshExpiresAt,
+  };
 }
 
 /**

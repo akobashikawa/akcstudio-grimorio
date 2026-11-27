@@ -17,7 +17,7 @@ Esta spec es específica de grimorio. La evaluación de Sveltia CMS para `akcstu
 
 **In:**
 
-- Registrar una **GitHub App** (paso manual documentado) con callback `/api/auth/callback`, permiso `Contents: Read and write` y `Metadata: Read-only`, instalada solo en este repositorio.
+- Registrar una **GitHub App** (paso manual documentado) con callback `/api/auth/callback/` (con barra final: GitHub redirige a la URL registrada exacta y Astro exige `trailingSlash: "always"`), permiso `Contents: Read and write` y `Metadata: Read-only`, instalada solo en este repositorio.
 - Activar **sesiones de Astro** con el driver KV que el adapter de Cloudflare aprovisiona automáticamente (binding `SESSION`), con `ttl` de 90 días.
 - Añadir cuatro rutas on-demand (`prerender = false`) en `src/pages/api/auth/`:
   - `GET /api/auth/login`
@@ -102,7 +102,7 @@ export type AdminSessionPayload = {
 ```text
 GET  /api/auth/login?next=/admin/?lang=es
      → 302 a https://github.com/login/oauth/authorize
-       ?client_id=<id>&redirect_uri=<origin>/api/auth/callback&state=<nonce>
+       ?client_id=<id>&redirect_uri=<origin>/api/auth/callback/&state=<nonce>
 
 GET  /api/auth/callback?code=...&state=...
      → valida state contra la sesión
@@ -173,7 +173,7 @@ export function clearLegacySession(): void;
 
 ## Implementation plan
 
-1. **Registro manual de la GitHub App.** En GitHub → Settings → Developer settings → GitHub Apps: crear `akcstudio-grimorio-admin`, callback `https://<dominio>/api/auth/callback` y `http://localhost:4321/api/auth/callback`, permisos `Contents: Read and write` y `Metadata: Read-only`, activar **Expire user authorization tokens**, instalar solo en `akcstudio-grimorio`. Crear `.dev.vars` con `GITHUB_APP_CLIENT_ID` y `GITHUB_APP_CLIENT_SECRET`, y añadir `.dev.vars` a `.gitignore`. Verificar con `pnpm build` que el sitio no cambia.
+1. **Registro manual de la GitHub App.** En GitHub → Settings → Developer settings → GitHub Apps: crear `akcstudio-grimorio-admin`, callback `https://<dominio>/api/auth/callback/` y `http://localhost:4321/api/auth/callback/` (con barra final), permisos `Contents: Read and write` y `Metadata: Read-only`, activar **Expire user authorization tokens**, instalar solo en `akcstudio-grimorio`. Crear `.dev.vars` con `GITHUB_APP_CLIENT_ID` y `GITHUB_APP_CLIENT_SECRET`, y añadir `.dev.vars` a `.gitignore`. Verificar con `pnpm build` que el sitio no cambia.
 2. Crear `src/pages/api/auth/ping.ts` con `prerender = false` que devuelva `{ ok: true }` y comprobar con `pnpm dev` y `pnpm build` que una ruta on-demand funciona con `output: "static"`. Eliminarlo al terminar el paso.
 3. Activar `session` en `astro.config.mjs` con el `cookie` y el `ttl` del modelo de datos. Verificar en `pnpm build` el aviso `Enabling sessions with Cloudflare KV with the "SESSION" KV binding.` y que `wrangler.jsonc` no necesita cambios manuales.
 4. Crear `src/lib/admin-auth.ts` con `AdminAuthEnv`, `AdminSessionData`, `AdminSessionPayload`, `authorizeUrl()`, `exchangeCode()`, `refreshAccessToken()`, `revokeGrant()`, `isAdminNextPath()` y `readAdminSession()`. Verificar con `pnpm check`.
