@@ -4,10 +4,21 @@
   "compatibility_flags": ["global_fetch_strictly_public"],
   "name": "akcstudio-grimorio",
   "main": "@astrojs/cloudflare/entrypoints/server",
+  "kv_namespaces": [
+    // Provisioned by the first deploy with sessions (SPEC 04); declaring it
+    // keeps deploys from depending on the auto-provisioning permission.
+    {
+      "binding": "SESSION",
+      "id": "7c9c5895d30b456390fc25ab8851212a",
+    },
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
+    // Browsers navigate (Sec-Fetch-Mode: navigate) to /api/auth/*; without
+    // this, those requests bypass the Worker and hit the 404 asset instead.
+    "run_worker_first": ["/api/*"],
   },
   "observability": {
     "enabled": true,
