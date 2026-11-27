@@ -4,6 +4,8 @@ description: prueba 3
 date: 2026-11-27
 lang: en
 category: notes
+tags:
+  - prueba
 featured: false
 draft: false
 ---
