@@ -2,6 +2,7 @@
 title: "How to deploy a self-hosted Pages CMS for free using Vercel, Neon, and GitHub"
 description: "A step-by-step guide to setting up your own instance of Pages CMS, connected to a Postgres database on Neon and deployed on Vercel—while avoiding common permission errors related to GitHub Apps."
 date: "2026-11-26"
+updated: "2026-11-27"
 lang: "en"
 category: "guides"
 tags:
@@ -12,7 +13,7 @@ tags:
   - "pages-cms"
   - "jamstack"
 featured: false
-draft: true
+draft: false
 ---
 
 Editing static sites (Astro, Hugo, Jekyll, or Eleventy) directly via Markdown files in Git is convenient when you’re at your code editor, but it becomes cumbersome when you simply want to fix a paragraph from your phone, or when you need someone else to publish content without having to interact with Git.
