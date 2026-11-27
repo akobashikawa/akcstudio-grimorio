@@ -24,13 +24,10 @@ export class GithubApiError extends Error {
   }
 }
 
-export type AdminSession = {
+export type TokenValidation = {
   token: string;
   user: string;
   expires?: string;
-};
-
-export type TokenValidation = AdminSession & {
   canWrite: boolean;
 };
 
