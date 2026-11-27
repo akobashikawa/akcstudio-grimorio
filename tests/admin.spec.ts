@@ -314,6 +314,229 @@ test("404 offers the missing translation when signed in", async ({ page }) => {
   await expect(link).toContainText("Crearlo en este idioma");
 });
 
+const WELCOME_PATH = `/repos/${OWNER}/${REPO}/contents/src/content/posts/en/welcome.md`;
+const WELCOME_MD = [
+  "---",
+  'title: "Welcome"',
+  'description: "English description"',
+  "date: 2026-01-02",
+  "lang: en",
+  "category: notes",
+  'tags: ["Astro"]',
+  "featured: true",
+  "draft: false",
+  "---",
+  "",
+  "English body.",
+  "",
+].join("\n");
+
+const fileResponse = () =>
+  jsonResponse({
+    type: "file",
+    name: "welcome.md",
+    path: "src/content/posts/en/welcome.md",
+    sha: "file-sha",
+    content: Buffer.from(WELCOME_MD, "utf8").toString("base64"),
+    encoding: "base64",
+  });
+
+const welcomeListing = () =>
+  jsonResponse([
+    {
+      type: "file",
+      name: "welcome.md",
+      path: "src/content/posts/en/welcome.md",
+      sha: "listing-sha",
+    },
+  ]);
+
+/** Stub session + listings so the list shows one post (en/welcome). */
+async function openListWithWelcomePost(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  const deletes: Record<string, unknown>[] = [];
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "DELETE") {
+      deletes.push(
+        JSON.parse(request.postData() ?? "{}") as Record<string, unknown>,
+      );
+      return route.fulfill(jsonResponse({ commit: { sha: "commit-sha" } }));
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+  return { deletes };
+}
+
+test("List deletes a post after confirmation", async ({ page }) => {
+  const { deletes } = await openListWithWelcomePost(page);
+
+  await page.getByRole("button", { name: "Delete post en/welcome" }).click();
+  await expect(page.getByText("src/content/posts/en/welcome.md")).toBeVisible();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByRole("status")).toContainText(
+    "Deleted posts/en/welcome.md.",
+  );
+  await expect(page).toHaveURL(/\/admin\/$/);
+  await expect(
+    page.getByRole("heading", { name: "Posts", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Welcome", { exact: true })).toBeHidden();
+  expect(deletes).toHaveLength(1);
+  expect(deletes[0].sha).toBe("file-sha");
+  expect(deletes[0].message).toBe("cms: delete posts/en/welcome.md");
+  expect(deletes[0].branch).toBe("master");
+});
+
+test("Cancel keeps the post and sends no request", async ({ page }) => {
+  const { deletes } = await openListWithWelcomePost(page);
+
+  await page.getByRole("button", { name: "Delete post en/welcome" }).click();
+  await expect(page.getByText("src/content/posts/en/welcome.md")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await expect(
+    page.getByRole("button", { name: "Delete post en/welcome" }),
+  ).toBeVisible();
+  await expect(page.getByRole("status")).toBeHidden();
+  expect(deletes).toHaveLength(0);
+});
+
+test("List treats a missing post as already deleted", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    let fileGets = 0;
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      // First GET loads the list; the sha GET before DELETE finds it gone.
+      fileGets += 1;
+      return fileGets === 1
+        ? route.fulfill(fileResponse())
+        : route.fulfill({ status: 404, headers: CORS, body: "{}" });
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete post en/welcome" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByRole("status")).toContainText(
+    "posts/en/welcome.md was already deleted.",
+  );
+  await expect(page.getByRole("alert")).toBeHidden();
+  await expect(page.getByText("Welcome", { exact: true })).toBeHidden();
+});
+
+test("Editor deletes the post and returns to the list", async ({ page }) => {
+  const { deletes } = await openListWithWelcomePost(page);
+
+  await page
+    .getByRole("button", { name: /Welcome en\/welcome/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Edit post", exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete post", exact: true }).click();
+  await expect(page.getByText("src/content/posts/en/welcome.md")).toBeVisible();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByRole("status")).toContainText(
+    "Deleted posts/en/welcome.md.",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Posts", exact: true }),
+  ).toBeVisible();
+  expect(deletes).toHaveLength(1);
+  expect(deletes[0].sha).toBe("file-sha");
+});
+
+test("List sends an expired session to the login card", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "DELETE") {
+      return route.fulfill({ status: 401, headers: CORS, body: "{}" });
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete post en/welcome" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Connect with GitHub", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem("grimorio.admin")),
+  ).toBeNull();
+});
+
 async function missingTranslation404(page: Page): Promise<string> {
   const response = await page.request.get("/es/404.html");
   const html = await response.text();
