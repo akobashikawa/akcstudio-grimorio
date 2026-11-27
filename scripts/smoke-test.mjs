@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import http from "node:http";
+import https from "node:https";
 import process from "node:process";
 
 const args = process.argv.slice(2);
@@ -47,6 +49,63 @@ const checks = [
   },
 ];
 
+// `fetch()` (undici) silently drops `Sec-*` headers because they are
+// forbidden header names, so it cannot emulate a browser navigation. With a
+// Worker attached, only navigation requests get the nearest `404.html` from
+// the assets layer (see assets_navigation_prefers_asset_serving); everything
+// else would hit the Worker's default 404. node:http sends headers verbatim.
+const NAVIGATION_HEADERS = {
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "User-Agent": "akcstudio-grimorio-smoke",
+};
+
+function request(path, redirects = 5) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${base}${path}`);
+    const client = url.protocol === "https:" ? https : http;
+    const req = client.get(
+      url,
+      { headers: NAVIGATION_HEADERS, timeout: 15_000 },
+      (response) => {
+        const location = response.headers.location;
+        if (
+          redirects > 0 &&
+          location &&
+          response.statusCode >= 300 &&
+          response.statusCode < 400
+        ) {
+          response.resume();
+          const next = new URL(location, url);
+          resolve(request(`${next.pathname}${next.search}`, redirects - 1));
+          return;
+        }
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () =>
+          resolve({
+            status: response.statusCode ?? 0,
+            headers: new Headers(
+              Object.entries(response.headers).flatMap(([key, value]) =>
+                value === undefined
+                  ? []
+                  : Array.isArray(value)
+                    ? value.map((item) => [key, item])
+                    : [[key, value]],
+              ),
+            ),
+            body: Buffer.concat(chunks),
+          }),
+        );
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("request timed out")));
+    req.on("error", reject);
+  });
+}
+
 let server;
 const serverLogs = [];
 const stopServer = () => {
@@ -81,10 +140,7 @@ async function runCheck(check, attempts = 3) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await fetch(`${base}${check.path}`, {
-        redirect: "follow",
-        signal: AbortSignal.timeout(15_000),
-      });
+      const response = await request(check.path);
       const problems = [];
       const expectedStatus = check.status ?? 200;
       if (response.status !== expectedStatus) {
@@ -94,7 +150,7 @@ async function runCheck(check, attempts = 3) {
       if (check.contentType && !contentType.startsWith(check.contentType)) {
         problems.push(`content-type ${contentType || "(none)"}`);
       }
-      const body = new Uint8Array(await response.arrayBuffer());
+      const body = new Uint8Array(response.body);
       if (check.magic) {
         const matches = check.magic.every(
           (byte, index) => body[index] === byte,
