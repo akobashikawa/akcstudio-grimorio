@@ -50,7 +50,10 @@ test("Tags, month archives, and an unknown category", async ({ page }) => {
   await page.goto(`/posts/?tag=${tag}`);
   await expect(page.locator(".post-card")).toHaveCount(tagCount);
   await page.goto(`/posts/?month=${month}`);
-  await expect(page.locator(".post-card")).toHaveCount(monthCount);
+  // A busy month can exceed one page; page 1 shows at most PAGE_SIZE cards.
+  await expect(page.locator(".post-card")).toHaveCount(
+    Math.min(monthCount, PAGE_SIZE),
+  );
   await expect(page.locator(".filter-summary")).toContainText(month);
   await page.goto("/posts/?category=missing&page=-5");
   await expect(page.getByText(t("post.emptyTitle"))).toBeVisible();
