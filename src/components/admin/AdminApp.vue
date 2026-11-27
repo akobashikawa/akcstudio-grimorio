@@ -11,6 +11,7 @@ import {
 } from "../../lib/admin-auth-client";
 import type { AdminSessionPayload } from "../../lib/admin-auth";
 import {
+  deletePost,
   getPost,
   GithubApiError,
   isValidSlug,
@@ -46,6 +47,7 @@ const createLang = ref<PostLanguage>("en");
 const createPrefill = ref<CreatePostPrefill | null>(null);
 const createNotice = ref("");
 const listNotice = ref("");
+const deleting = ref(false);
 const fallbackCategory: Category = props.categories.includes(
   "notes" as Category,
 )
@@ -153,6 +155,49 @@ function onPostSaved(updated: PostSummary) {
   posts.value = posts.value.map((post) =>
     post.lang === updated.lang && post.slug === updated.slug ? updated : post,
   );
+}
+
+async function removePost(post: PostSummary) {
+  const current = session.value;
+  if (!current || deleting.value) return;
+  deleting.value = true;
+  postsError.value = "";
+  try {
+    await deletePost(props.repo, current.token, post.lang, post.slug);
+    posts.value = posts.value.filter(
+      (candidate) =>
+        candidate.lang !== post.lang || candidate.slug !== post.slug,
+    );
+    listNotice.value = `Deleted posts/${post.lang}/${post.slug}.md.`;
+    view.value = "list";
+    selectedPost.value = null;
+    createPrefill.value = null;
+    updateQuery();
+  } catch (reason) {
+    if (reason instanceof GithubApiError && reason.status === 401) {
+      onUnauthorized();
+      return;
+    }
+    if (reason instanceof GithubApiError && reason.status === 404) {
+      // Already gone (deleted elsewhere): treat it as a success.
+      posts.value = posts.value.filter(
+        (candidate) =>
+          candidate.lang !== post.lang || candidate.slug !== post.slug,
+      );
+      listNotice.value = `posts/${post.lang}/${post.slug}.md was already deleted.`;
+      view.value = "list";
+      selectedPost.value = null;
+      createPrefill.value = null;
+      updateQuery();
+      return;
+    }
+    postsError.value =
+      reason instanceof Error
+        ? reason.message
+        : "Could not delete the post.";
+  } finally {
+    deleting.value = false;
+  }
 }
 
 async function onPostCreated(result: CreatePostResult) {
