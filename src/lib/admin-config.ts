@@ -6,21 +6,18 @@ export type AdminRepoConfig = {
   branch: "master";
 };
 
+// SPEC 04: the only client-side key. It is a UI hint (not a credential) that
+// makes the admin entry points visible; the real session lives in the Worker.
 export const ADMIN_STORAGE_KEYS = {
-  token: "grimorio.github.token",
-  user: "grimorio.github.user",
-  expires: "grimorio.github.expires",
-  writeVerified: "grimorio.github.writeVerified",
-  // SPEC 04: non-secret UI hint; the real session lives in the Worker.
   signedIn: "grimorio.admin",
 } as const;
 
 /** Pre-SPEC 04 keys, removed from the browser on the first admin load. */
 export const ADMIN_LEGACY_STORAGE_KEYS = [
-  ADMIN_STORAGE_KEYS.token,
-  ADMIN_STORAGE_KEYS.user,
-  ADMIN_STORAGE_KEYS.expires,
-  ADMIN_STORAGE_KEYS.writeVerified,
+  "grimorio.github.token",
+  "grimorio.github.user",
+  "grimorio.github.expires",
+  "grimorio.github.writeVerified",
 ] as const;
 
 // The site config keeps the repository as a public GitHub URL; the admin only
