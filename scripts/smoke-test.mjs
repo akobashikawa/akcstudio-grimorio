@@ -101,8 +101,8 @@ async function runCheck(check, attempts = 3) {
         );
         if (!matches) problems.push("unexpected file signature");
       }
+      const text = new TextDecoder().decode(body);
       if (check.contains) {
-        const text = new TextDecoder().decode(body);
         for (const needle of check.contains) {
           if (!text.includes(needle))
             problems.push(`missing ${JSON.stringify(needle)}`);
