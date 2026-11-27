@@ -109,7 +109,15 @@ async function runCheck(check, attempts = 3) {
         }
       }
       if (problems.length === 0) return { ok: true };
-      lastError = problems.join(", ");
+      // Diagnose which page variant was actually served (e.g. the localized
+      // 404 pages share status and content-type; the <title> tells them apart).
+      const title = /<title>([^<]*)<\/title>/.exec(text)?.[1];
+      lastError = [
+        ...problems,
+        title ? `served page: "${title}"` : "no <title> found",
+        `status ${response.status}`,
+        `content-type ${contentType || "(none)"}`,
+      ].join(", ");
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }
