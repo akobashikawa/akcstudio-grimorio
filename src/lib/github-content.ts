@@ -171,6 +171,10 @@ async function githubFetch(
   headers.set("Accept", "application/vnd.github+json");
   headers.set("Authorization", `Bearer ${token}`);
   headers.set("X-GitHub-Api-Version", "2022-11-28");
+  // GitHub requires a User-Agent. Browsers send one automatically (and ignore
+  // this override: it is a forbidden header name), but Cloudflare Workers'
+  // fetch() does not, so the server-side session code needs it explicitly.
+  headers.set("User-Agent", "akcstudio-grimorio-admin");
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

@@ -158,7 +158,11 @@ export async function refreshAccessToken(
 ): Promise<GitHubTokens | null> {
   const response = await fetch(TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "akcstudio-grimorio-admin",
+    },
     body: JSON.stringify({
       client_id: env.GITHUB_APP_CLIENT_ID,
       client_secret: env.GITHUB_APP_CLIENT_SECRET,
@@ -203,6 +207,7 @@ export async function revokeGrant(
           )}`,
           Accept: "application/vnd.github+json",
           "Content-Type": "application/json",
+          "User-Agent": "akcstudio-grimorio-admin",
         },
         body: JSON.stringify({ access_token: accessToken }),
       },
