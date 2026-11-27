@@ -383,9 +383,11 @@ function formatExpiration(expiresAt: number): string {
         :token="session.token"
         :post="selectedPost"
         :categories="categories"
+        :deleting="deleting"
         @saved="onPostSaved"
         @back="backToList"
         @unauthorized="onUnauthorized"
+        @delete="removePost"
       />
       <template v-else-if="view === 'new'">
         <p v-if="createNotice" class="admin-error" role="alert">

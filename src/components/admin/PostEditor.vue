@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { nextTick, onMounted, reactive, ref } from "vue";
 import type { Category } from "../../data/post-options";
 import type { AdminRepoConfig } from "../../lib/admin-config";
 import {
@@ -21,12 +21,14 @@ const props = defineProps<{
   token: string;
   post: PostSummary;
   categories: Category[];
+  deleting?: boolean;
 }>();
 
 const emit = defineEmits<{
   saved: [post: PostSummary];
   back: [];
   unauthorized: [];
+  delete: [post: PostSummary];
 }>();
 
 const form = reactive({
@@ -107,6 +109,25 @@ async function load() {
 }
 
 onMounted(load);
+
+const pendingDelete = ref(false);
+const confirmDeleteButton = ref<HTMLButtonElement | null>(null);
+
+async function askDelete() {
+  pendingDelete.value = true;
+  await nextTick();
+  confirmDeleteButton.value?.focus();
+}
+
+function cancelDelete() {
+  pendingDelete.value = false;
+}
+
+function confirmDelete() {
+  if (!pendingDelete.value || props.deleting) return;
+  pendingDelete.value = false;
+  emit("delete", props.post);
+}
 
 async function save() {
   saveError.value = "";
@@ -336,6 +357,42 @@ async function save() {
         <button class="btn secondary" type="button" @click="emit('back')">
           Back to posts
         </button>
+        <div
+          v-if="pendingDelete"
+          class="admin-delete-confirm"
+          role="group"
+          :aria-label="`Confirm deleting ${post.lang}/${post.slug}`"
+        >
+          <span class="admin-delete-path">
+            src/content/posts/{{ post.lang }}/{{ post.slug }}.md
+          </span>
+          <button
+            ref="confirmDeleteButton"
+            class="btn danger"
+            type="button"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            Delete
+          </button>
+          <button
+            class="btn secondary"
+            type="button"
+            @click="cancelDelete"
+          >
+            Cancel
+          </button>
+        </div>
+        <button
+          v-else
+          class="btn secondary admin-delete"
+          type="button"
+          :disabled="deleting"
+          @click="askDelete"
+        >
+          <span class="icon-[lucide--trash-2]" aria-hidden="true"></span>
+          Delete post
+        </button>
       </div>
     </form>
   </section>
@@ -536,8 +593,51 @@ async function save() {
   gap: 8px;
   padding-top: 4px;
 }
+.admin-delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex-basis: 100%;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border: 1px solid #e7b4ae;
+  border-radius: var(--radius);
+  background: #fdf2f1;
+}
+:global(.dark) .admin-delete-confirm {
+  border-color: #623b37;
+  background: #2c211f;
+}
+.admin-delete-path {
+  flex: 1;
+  min-width: 200px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.admin-delete-confirm .btn,
 .admin-form-actions .btn {
   font-size: 14px;
+}
+.admin-delete {
+  color: #b42318;
+  border-color: #e7b4ae;
+}
+.admin-delete:hover:not(:disabled) {
+  background: #fdf2f1;
+  color: #b42318;
+  border-color: #b42318;
+}
+:global(.dark) .admin-delete {
+  color: #ff9b8f;
+  border-color: #623b37;
+}
+:global(.dark) .admin-delete:hover:not(:disabled) {
+  background: #2c211f;
+  color: #ff9b8f;
+  border-color: #b42318;
 }
 @media (max-width: 760px) {
   .admin-field-grid {
