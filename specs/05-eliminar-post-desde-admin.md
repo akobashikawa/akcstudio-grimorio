@@ -1,6 +1,6 @@
 # SPEC 05 — Eliminar un post desde `/admin/`
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 01, SPEC 03, SPEC 04
 > **Date:** 2026-11-27
 > **Objective:** Permitir borrar un post de un idioma desde el listado y el editor de `/admin/`, con confirmación de dos pasos y la misma convención de commit que el resto del admin.
