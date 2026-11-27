@@ -368,10 +368,12 @@ function formatExpiration(expiresAt: number): string {
         <PostList
           :posts="posts"
           :loading="loadingPosts"
+          :deleting="deleting"
           :error="postsError"
           @edit="editPost"
           @create="startCreate"
           @refresh="loadPosts"
+          @delete="removePost"
         />
       </template>
       <PostEditor

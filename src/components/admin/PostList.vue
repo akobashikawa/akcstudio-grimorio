@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import type { PostSummary } from "../../lib/github-content";
 import type { PostLanguage } from "../../lib/frontmatter";
 
@@ -8,6 +8,7 @@ type LanguageFilter = "all" | "en" | "es";
 const props = defineProps<{
   posts: PostSummary[];
   loading: boolean;
+  deleting?: boolean;
   error?: string;
 }>();
 
@@ -15,10 +16,13 @@ const emit = defineEmits<{
   edit: [post: PostSummary];
   create: [lang: PostLanguage];
   refresh: [];
+  delete: [post: PostSummary];
 }>();
 
 const query = ref("");
 const language = ref<LanguageFilter>("all");
+const pendingDelete = ref<string | null>(null);
+const confirmButton = ref<HTMLButtonElement | null>(null);
 
 const languageOptions: { value: LanguageFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -49,6 +53,24 @@ const emptyMessage = computed(() =>
 
 function startCreate() {
   emit("create", language.value === "all" ? "en" : language.value);
+}
+
+const deleteKey = (post: PostSummary) => `${post.lang}/${post.slug}`;
+
+async function askDelete(post: PostSummary) {
+  pendingDelete.value = deleteKey(post);
+  await nextTick();
+  confirmButton.value?.focus();
+}
+
+function cancelDelete() {
+  pendingDelete.value = null;
+}
+
+function confirmDelete(post: PostSummary) {
+  if (pendingDelete.value !== deleteKey(post)) return;
+  pendingDelete.value = null;
+  emit("delete", post);
 }
 </script>
 
@@ -113,26 +135,66 @@ function startCreate() {
     </p>
     <ul v-else class="admin-post-list">
       <li v-for="post in filtered" :key="`${post.lang}/${post.slug}`">
-        <button
-          class="admin-post-row"
-          type="button"
-          @click="emit('edit', post)"
-        >
-          <span class="admin-post-main">
-            <strong>{{ post.title }}</strong>
-            <span class="admin-post-slug">{{ post.lang }}/{{ post.slug }}</span>
-          </span>
-          <span class="admin-post-meta">
-            <span
-              class="admin-badge"
-              :class="post.draft ? 'is-draft' : 'is-live'"
-            >
-              {{ post.draft ? "Draft" : "Published" }}
+        <div class="admin-post-item">
+          <button
+            class="admin-post-row"
+            type="button"
+            @click="emit('edit', post)"
+          >
+            <span class="admin-post-main">
+              <strong>{{ post.title }}</strong>
+              <span class="admin-post-slug"
+                >{{ post.lang }}/{{ post.slug }}</span
+              >
             </span>
-            <span>{{ post.date }}</span>
-            <span class="admin-post-category">{{ post.category }}</span>
-          </span>
-        </button>
+            <span class="admin-post-meta">
+              <span
+                class="admin-badge"
+                :class="post.draft ? 'is-draft' : 'is-live'"
+              >
+                {{ post.draft ? "Draft" : "Published" }}
+              </span>
+              <span>{{ post.date }}</span>
+              <span class="admin-post-category">{{ post.category }}</span>
+            </span>
+          </button>
+          <div
+            v-if="pendingDelete === deleteKey(post)"
+            class="admin-delete-confirm"
+            role="group"
+            :aria-label="`Confirm deleting ${post.lang}/${post.slug}`"
+          >
+            <span class="admin-delete-path">
+              src/content/posts/{{ post.lang }}/{{ post.slug }}.md
+            </span>
+            <button
+              ref="confirmButton"
+              class="btn danger"
+              type="button"
+              :disabled="deleting"
+              @click="confirmDelete(post)"
+            >
+              Delete
+            </button>
+            <button
+              class="btn secondary"
+              type="button"
+              @click="cancelDelete"
+            >
+              Cancel
+            </button>
+          </div>
+          <button
+            v-else
+            class="admin-trash"
+            type="button"
+            :disabled="deleting || loading"
+            :aria-label="`Delete post ${post.lang}/${post.slug}`"
+            @click="askDelete(post)"
+          >
+            <span class="icon-[lucide--trash-2]" aria-hidden="true"></span>
+          </button>
+        </div>
       </li>
     </ul>
   </section>
@@ -240,6 +302,84 @@ function startCreate() {
 }
 .admin-post-list li + li {
   border-top: 1px solid var(--line);
+}
+.admin-post-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.admin-post-item .admin-post-row {
+  flex: 1;
+  min-width: 0;
+}
+.admin-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  margin-right: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.admin-trash:hover:not(:disabled) {
+  background: #fdf2f1;
+  color: #b42318;
+}
+.admin-trash:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+:global(.dark) .admin-trash:hover:not(:disabled) {
+  background: #2c211f;
+  color: #ff9b8f;
+}
+.admin-delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px;
+  padding: 10px 14px;
+  border: 1px solid #e7b4ae;
+  border-radius: var(--radius);
+  background: #fdf2f1;
+}
+:global(.dark) .admin-delete-confirm {
+  border-color: #623b37;
+  background: #2c211f;
+}
+.admin-delete-path {
+  flex: 1;
+  min-width: 200px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.admin-delete-confirm .btn {
+  font-size: 13px;
+  padding: 5px 11px;
+}
+.btn.danger {
+  border-color: #e7b4ae;
+  background: #b42318;
+  color: #fff;
+}
+.btn.danger:hover:not(:disabled) {
+  background: #b42318;
+  filter: brightness(1.1);
+  color: #fff;
+}
+:global(.dark) .btn.danger {
+  border-color: #623b37;
+  background: #b42318;
+  color: #fff;
 }
 .admin-post-row {
   display: flex;
