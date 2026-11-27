@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { Category } from "../../data/post-options";
 import type { AdminRepoConfig } from "../../lib/admin-config";
 import {
@@ -15,9 +15,11 @@ import {
   getPost,
   GithubApiError,
   isValidSlug,
+  listDeployRuns,
   listPosts,
   type CreatePostPrefill,
   type CreatePostResult,
+  type DeployRun,
   type PostSummary,
 } from "../../lib/github-content";
 import { today, type PostLanguage } from "../../lib/frontmatter";
@@ -48,11 +50,140 @@ const createPrefill = ref<CreatePostPrefill | null>(null);
 const createNotice = ref("");
 const listNotice = ref("");
 const deleting = ref(false);
+
+type DeployStatus = {
+  sha: string; // commit being deployed
+  status: DeployRun["status"];
+  conclusion: DeployRun["conclusion"];
+  htmlUrl: string;
+  startedAt: number; // epoch ms used by the elapsed counter
+  error?: "forbidden" | "unavailable";
+};
+
+const deploy = ref<DeployStatus | null>(null);
+const deployNow = ref(Date.now()); // ticks once per second for the counter
+let deployPoll: ReturnType<typeof setInterval> | null = null;
+let deployClock: ReturnType<typeof setInterval> | null = null;
+let deployDeadline = 0;
+
+function stopDeployTracking() {
+  if (deployPoll !== null) clearInterval(deployPoll);
+  if (deployClock !== null) clearInterval(deployClock);
+  deployPoll = null;
+  deployClock = null;
+}
+
+/** Follow the Deploy workflow run for a commit the admin just wrote. */
+function trackDeploy(commitSha: string) {
+  const current = session.value;
+  if (!current || !commitSha) return;
+  stopDeployTracking();
+  deployDeadline = Date.now() + 15 * 60 * 1000;
+  deploy.value = {
+    sha: commitSha,
+    status: "queued",
+    conclusion: null,
+    htmlUrl: "",
+    startedAt: Date.now(),
+  };
+  deployNow.value = Date.now();
+
+  const poll = async () => {
+    const payload = session.value;
+    const target = deploy.value;
+    if (!payload || !target || Date.now() > deployDeadline) {
+      stopDeployTracking();
+      return;
+    }
+    deployNow.value = Date.now();
+    try {
+      const run = await listDeployRuns(props.repo, payload.token, target.sha);
+      if (deploy.value?.sha !== target.sha) return; // superseded by a new save
+      if (run) {
+        deploy.value = {
+          ...target,
+          status: run.status,
+          conclusion: run.conclusion,
+          htmlUrl: run.htmlUrl,
+          startedAt: run.runStartedAt
+            ? Date.parse(run.runStartedAt)
+            : target.startedAt,
+        };
+        if (run.status === "completed") stopDeployTracking();
+        return;
+      }
+      if (Date.now() > target.startedAt + 2 * 60 * 1000) {
+        deploy.value = { ...target, error: "unavailable" };
+        stopDeployTracking();
+      }
+    } catch (reason) {
+      stopDeployTracking();
+      if (
+        deploy.value?.sha === target.sha &&
+        reason instanceof GithubApiError &&
+        reason.status === 403
+      ) {
+        deploy.value = { ...target, error: "forbidden" };
+      }
+      // 401 or network failures stop the tracking silently.
+    }
+  };
+
+  void poll();
+  deployPoll = setInterval(poll, 10_000);
+  deployClock = setInterval(() => (deployNow.value = Date.now()), 1000);
+}
 const fallbackCategory: Category = props.categories.includes(
   "notes" as Category,
 )
   ? "notes"
   : (props.categories[0] ?? "notes");
+
+const workflowUrl = `https://github.com/${props.repo.owner}/${props.repo.repo}/actions/workflows/deploy.yml`;
+
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const seconds = String(total % 60).padStart(2, "0");
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${seconds}`;
+}
+
+const deployLabel = computed(() => {
+  const status = deploy.value;
+  if (!status) return "";
+  if (status.error === "forbidden") {
+    return "Deploy status unavailable. Add Actions: Read-only to the GitHub App.";
+  }
+  if (status.error === "unavailable") return "Deploy not started yet";
+  const elapsed = formatElapsed(
+    Math.max(0, deployNow.value - status.startedAt),
+  );
+  if (status.status === "completed") {
+    if (status.conclusion === "success") return `Live · ${elapsed}`;
+    if (status.conclusion === "failure") return `Deploy failed · ${elapsed}`;
+    return `Deploy ${status.conclusion ?? "finished"} · ${elapsed}`;
+  }
+  if (
+    status.status === "in_progress" ||
+    status.status === "waiting" ||
+    status.status === "pending" ||
+    status.status === "requested"
+  ) {
+    return `Deploying… ${elapsed}`;
+  }
+  return "Deploy queued";
+});
+
+const deployClass = computed(() => {
+  const status = deploy.value;
+  if (!status) return "";
+  if (status.error) return "is-stalled";
+  if (status.status === "completed" && status.conclusion === "success")
+    return "is-live";
+  if (status.status === "completed") return "is-failed";
+  if (status.status === "queued") return "is-queued";
+  return "is-running";
+});
 
 onMounted(async () => {
   clearLegacySession();
@@ -78,6 +209,8 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+onUnmounted(stopDeployTracking);
 
 async function loadPosts() {
   const current = session.value;
@@ -109,6 +242,8 @@ async function loadPosts() {
 
 function logout() {
   forgetSignedIn();
+  stopDeployTracking();
+  deploy.value = null;
   session.value = null;
   posts.value = [];
   postsError.value = "";
@@ -150,11 +285,12 @@ function backToList() {
   updateQuery();
 }
 
-function onPostSaved(updated: PostSummary) {
+function onPostSaved(updated: PostSummary, commitSha: string) {
   selectedPost.value = updated;
   posts.value = posts.value.map((post) =>
     post.lang === updated.lang && post.slug === updated.slug ? updated : post,
   );
+  trackDeploy(commitSha);
 }
 
 async function removePost(post: PostSummary) {
@@ -163,7 +299,12 @@ async function removePost(post: PostSummary) {
   deleting.value = true;
   postsError.value = "";
   try {
-    await deletePost(props.repo, current.token, post.lang, post.slug);
+    const result = await deletePost(
+      props.repo,
+      current.token,
+      post.lang,
+      post.slug,
+    );
     posts.value = posts.value.filter(
       (candidate) =>
         candidate.lang !== post.lang || candidate.slug !== post.slug,
@@ -173,6 +314,7 @@ async function removePost(post: PostSummary) {
     selectedPost.value = null;
     createPrefill.value = null;
     updateQuery();
+    trackDeploy(result.commitSha);
   } catch (reason) {
     if (reason instanceof GithubApiError && reason.status === 401) {
       onUnauthorized();
@@ -206,6 +348,7 @@ async function onPostCreated(result: CreatePostResult) {
   createPrefill.value = null;
   listNotice.value = `Created posts/${result.lang}/${result.slug}.md.`;
   updateQuery();
+  trackDeploy(result.commitSha);
 }
 
 function onUnauthorized() {
@@ -356,6 +499,28 @@ function formatExpiration(expiresAt: number): string {
       </div>
     </header>
 
+    <div
+      v-if="session && deploy"
+      class="admin-deploy"
+      :class="deployClass"
+      role="status"
+    >
+      <span class="icon-[lucide--rocket]" aria-hidden="true"></span>
+      <span class="admin-deploy-label">{{ deployLabel }}</span>
+      <a
+        v-if="
+          deploy.error !== 'forbidden' &&
+          (deploy.htmlUrl || deploy.error === 'unavailable')
+        "
+        class="admin-deploy-link"
+        :href="deploy.htmlUrl || workflowUrl"
+        target="_blank"
+        rel="noreferrer"
+      >
+        View run<span class="icon-[lucide--arrow-up-right]"></span>
+      </a>
+    </div>
+
     <p v-if="loading" class="admin-hint">Checking session...</p>
     <LoginCard v-else-if="!session" :repo="repo" :initial-error="loginError" />
     <template v-else>
@@ -455,6 +620,61 @@ function formatExpiration(expiresAt: number): string {
 .admin-account .btn {
   font-size: 13px;
   padding: 5px 11px;
+}
+.admin-deploy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+}
+.admin-deploy.is-queued {
+  color: var(--muted);
+}
+.admin-deploy.is-running {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.admin-deploy.is-live {
+  border-color: #b7dcc4;
+  background: #eef8f1;
+  color: #22633a;
+}
+:global(.dark) .admin-deploy.is-live {
+  border-color: #315640;
+  background: #1d2c23;
+  color: #91d3a7;
+}
+.admin-deploy.is-failed {
+  border-color: #e7b4ae;
+  background: #fdf2f1;
+  color: #b42318;
+}
+:global(.dark) .admin-deploy.is-failed {
+  border-color: #623b37;
+  background: #2c211f;
+  color: #ff9b8f;
+}
+.admin-deploy.is-stalled {
+  border-style: dashed;
+}
+.admin-deploy-label {
+  flex: 1;
+  min-width: 0;
+}
+.admin-deploy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  font-weight: 500;
 }
 .admin-hint {
   margin: 0;

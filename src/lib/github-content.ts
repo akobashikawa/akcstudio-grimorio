@@ -137,6 +137,27 @@ export type DeletePostResult = {
   commitSha: string;
 };
 
+export type DeployRun = {
+  status:
+    | "queued"
+    | "in_progress"
+    | "completed"
+    | "requested"
+    | "waiting"
+    | "pending";
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "startup_failure"
+    | "timed_out"
+    | null;
+  htmlUrl: string;
+  runStartedAt: string | null;
+  updatedAt: string;
+};
+
 export function isValidSlug(slug: string): boolean {
   return SLUG_PATTERN.test(slug);
 }
@@ -476,6 +497,52 @@ export async function deletePost(
     slug,
     path,
     commitSha: response.commit.sha,
+  };
+}
+
+// The Deploy workflow is the one that changes what a visitor sees; the admin
+// indicator tracks it and ignores the parallel Quality checks run.
+const DEPLOY_WORKFLOW_PATH = ".github/workflows/deploy.yml";
+
+type WorkflowRunResponse = {
+  workflow_runs?: {
+    path?: string;
+    head_sha?: string;
+    status?: string;
+    conclusion?: string | null;
+    html_url?: string;
+    created_at?: string;
+    run_started_at?: string;
+    updated_at?: string;
+  }[];
+};
+
+/**
+ * Latest run of the Deploy workflow for a commit. Requires the GitHub App to
+ * have Actions: Read-only. Returns null when the run has not been created yet.
+ */
+export async function listDeployRuns(
+  config: AdminRepoConfig,
+  token: string,
+  headSha: string,
+): Promise<DeployRun | null> {
+  const query = new URLSearchParams({ head_sha: headSha, per_page: "20" });
+  const data = await githubJson<WorkflowRunResponse>(
+    `${repoPath(config)}/actions/runs?${query.toString()}`,
+    token,
+  );
+  const runs = (data.workflow_runs ?? [])
+    .filter((run) => run.path === DEPLOY_WORKFLOW_PATH)
+    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+  const latest = runs.at(-1);
+  if (!latest) return null;
+
+  return {
+    status: (latest.status ?? "queued") as DeployRun["status"],
+    conclusion: (latest.conclusion ?? null) as DeployRun["conclusion"],
+    htmlUrl: latest.html_url ?? "",
+    runStartedAt: latest.run_started_at ?? null,
+    updatedAt: latest.updated_at ?? latest.created_at ?? "",
   };
 }
 

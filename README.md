@@ -152,7 +152,7 @@ The admin authenticates through a GitHub App and a server session: no GitHub tok
 
 1. Register the GitHub App (Settings → Developer settings → GitHub Apps). Name: `akcstudio-grimorio-admin`.
    - **Callback URL**: `https://<domain>/api/auth/callback/` and `http://localhost:4321/api/auth/callback/`. The trailing slash is required: the site uses `trailingSlash: "always"` and GitHub redirects to the registered URL exactly.
-   - Permissions: **Contents: Read and write** and **Metadata: Read-only**.
+   - Permissions: **Contents: Read and write**, **Metadata: Read-only** and **Actions: Read-only** (the admin shows the deploy status of the commits you save).
    - Check **Expire user authorization tokens**; it provides the 8-hour access token and the 6-month refresh token the session renews automatically.
    - Install it on **Only select repositories** → `akcstudio-grimorio`.
 2. Store the app credentials as Cloudflare secrets: `npx wrangler secret put GITHUB_APP_CLIENT_ID` and `npx wrangler secret put GITHUB_APP_CLIENT_SECRET`.
@@ -166,6 +166,8 @@ The editor can list English and Spanish posts (including drafts), edit frontmatt
 If a post exists only in one language and you open its URL under the other language while signed in, the 404 page shows a button to create the missing version. The form opens prefilled with the original title, description, date, category, tags, featured flag and body, and always starts as a draft so you can translate it before publishing.
 
 **Log out** destroys the server session and revokes the GitHub authorization as a best-effort. Deleting the site cookies also ends the session.
+
+**Deploy status**: after saving, creating or deleting a post, a banner under the header follows the **Deploy** workflow for that commit: `Deploy queued` → `Deploying… {m:ss}` → `Live · {m:ss}`, with **View run** linking to the run in GitHub Actions. A failed deploy shows `Deploy failed`. When the app lacks the Actions permission, the banner reports `Deploy status unavailable` until you approve the new permissions (Settings → Applications → Authorized GitHub Apps); editing keeps working either way.
 
 Limitations:
 
