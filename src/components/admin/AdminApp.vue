@@ -3,29 +3,27 @@ import { onMounted, ref } from "vue";
 import type { Category } from "../../data/post-options";
 import type { AdminRepoConfig } from "../../lib/admin-config";
 import {
-  clearStoredSession,
-  hasWriteVerified,
-  loadStoredSession,
-  markWriteVerified,
-  storeSession,
-} from "../../lib/admin-session";
+  clearLegacySession,
+  fetchSession,
+  forgetSignedIn,
+  rememberSignedIn,
+  signOut,
+} from "../../lib/admin-auth-client";
+import type { AdminSessionPayload } from "../../lib/admin-auth";
 import {
   getPost,
   GithubApiError,
   isValidSlug,
   listPosts,
-  validateToken,
-  verifyWriteAccess,
-  type AdminSession,
   type CreatePostPrefill,
   type CreatePostResult,
   type PostSummary,
 } from "../../lib/github-content";
 import { today, type PostLanguage } from "../../lib/frontmatter";
+import LoginCard from "./LoginCard.vue";
 import PostCreator from "./PostCreator.vue";
 import PostEditor from "./PostEditor.vue";
 import PostList from "./PostList.vue";
-import TokenLogin from "./TokenLogin.vue";
 
 type AdminView = "list" | "edit" | "new";
 
@@ -34,8 +32,10 @@ const props = defineProps<{
   categories: Category[];
 }>();
 
-const session = ref<AdminSession | null>(null);
-const checking = ref(true);
+// The access token lives only in memory; localStorage holds the non-secret
+// `grimorio.admin` flag, and the real session sits in the Worker's KV.
+const session = ref<AdminSessionPayload | null>(null);
+const loading = ref(true);
 const loginError = ref("");
 const posts = ref<PostSummary[]>([]);
 const loadingPosts = ref(false);
@@ -53,48 +53,27 @@ const fallbackCategory: Category = props.categories.includes(
   : (props.categories[0] ?? "notes");
 
 onMounted(async () => {
-  const stored = loadStoredSession();
-  if (!stored) {
-    checking.value = false;
-    return;
-  }
-
+  clearLegacySession();
   try {
-    const result = await validateToken(props.repo, stored.token);
-    if (!result.canWrite) {
-      clearStoredSession();
-      loginError.value =
-        "This token does not have write access to the repository.";
+    const payload = await fetchSession();
+    if (!payload) {
+      return; // Unauthenticated: the login card shows below.
+    }
+    if (!payload.canWrite) {
+      loginError.value = `GitHub did not grant write access to ${props.repo.owner}/${props.repo.repo}. Check that the app is installed on the repository and that you have write access.`;
       return;
     }
-    if (!hasWriteVerified()) {
-      const write = await verifyWriteAccess(props.repo, stored.token);
-      if (!write.canWrite) {
-        clearStoredSession();
-        loginError.value = `The saved token cannot write to ${props.repo.owner}/${props.repo.repo}: ${write.message}. Connect again with a token that has Contents: Read and write.`;
-        return;
-      }
-      markWriteVerified();
-    }
-    const next: AdminSession = {
-      token: stored.token,
-      user: result.user,
-      expires: result.expires,
-    };
-    storeSession(next);
-    session.value = next;
+    session.value = payload;
+    rememberSignedIn();
     await loadPosts();
     await openFromQuery();
   } catch (reason) {
-    clearStoredSession();
     loginError.value =
-      reason instanceof GithubApiError && reason.status === 401
-        ? "Your stored GitHub token expired. Connect again."
-        : reason instanceof Error
-          ? reason.message
-          : "Could not validate the saved token.";
+      reason instanceof Error
+        ? reason.message
+        : "Could not load the admin session.";
   } finally {
-    checking.value = false;
+    loading.value = false;
   }
 });
 
@@ -114,11 +93,9 @@ async function loadPosts() {
     );
   } catch (reason) {
     if (reason instanceof GithubApiError && reason.status === 401) {
-      clearStoredSession();
-      session.value = null;
-      loginError.value = "Your GitHub token expired. Connect again.";
+      onUnauthorized();
     } else if (reason instanceof GithubApiError && reason.status === 403) {
-      postsError.value = `GitHub denied access: ${reason.message}. Check that the token has Contents: Read and write and access to ${props.repo.owner}/${props.repo.repo}.`;
+      postsError.value = `GitHub denied access: ${reason.message}. Check that the GitHub App is installed on ${props.repo.owner}/${props.repo.repo} with Contents: Read and write.`;
     } else {
       postsError.value =
         reason instanceof Error ? reason.message : "Could not load posts.";
@@ -128,18 +105,8 @@ async function loadPosts() {
   }
 }
 
-async function onAuthenticated(next: AdminSession) {
-  session.value = next;
-  loginError.value = "";
-  listNotice.value = "";
-  view.value = "list";
-  selectedPost.value = null;
-  await loadPosts();
-  await openFromQuery();
-}
-
 function logout() {
-  clearStoredSession();
+  forgetSignedIn();
   session.value = null;
   posts.value = [];
   postsError.value = "";
@@ -149,6 +116,9 @@ function logout() {
   view.value = "list";
   selectedPost.value = null;
   loginError.value = "";
+  void signOut().catch(() => {
+    // The local state is already cleared; the server session expires on its own.
+  });
   updateQuery();
 }
 
@@ -196,7 +166,7 @@ async function onPostCreated(result: CreatePostResult) {
 }
 
 function onUnauthorized() {
-  clearStoredSession();
+  forgetSignedIn();
   session.value = null;
   posts.value = [];
   postsError.value = "";
@@ -205,7 +175,7 @@ function onUnauthorized() {
   createPrefill.value = null;
   view.value = "list";
   selectedPost.value = null;
-  loginError.value = "Your GitHub token expired. Connect again.";
+  loginError.value = "Your GitHub session expired. Connect again.";
   updateQuery();
 }
 
@@ -314,15 +284,14 @@ async function openCreateFromQuery(params: URLSearchParams) {
   view.value = "new";
 }
 
-function formatExpiration(value?: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf())
-    ? value
-    : new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeZone: "UTC",
-      }).format(date);
+function formatExpiration(expiresAt: number): string {
+  const date = new Date(expiresAt);
+  if (Number.isNaN(date.valueOf())) return "";
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
 }
 </script>
 
@@ -334,9 +303,9 @@ function formatExpiration(value?: string): string {
         <h1>Edit posts</h1>
       </div>
       <div v-if="session" class="admin-account">
-        <span class="admin-user">@{{ session.user }}</span>
-        <span v-if="session.expires" class="admin-expiry">
-          Token expires {{ formatExpiration(session.expires) }}
+        <span class="admin-user">@{{ session.login }}</span>
+        <span class="admin-expiry">
+          Session expires {{ formatExpiration(session.expiresAt) }}
         </span>
         <button class="btn secondary" type="button" @click="logout">
           Log out
@@ -344,13 +313,8 @@ function formatExpiration(value?: string): string {
       </div>
     </header>
 
-    <p v-if="checking" class="admin-hint">Checking saved token...</p>
-    <TokenLogin
-      v-else-if="!session"
-      :repo="repo"
-      :initial-error="loginError"
-      @authenticated="onAuthenticated"
-    />
+    <p v-if="loading" class="admin-hint">Checking session...</p>
+    <LoginCard v-else-if="!session" :repo="repo" :initial-error="loginError" />
     <template v-else>
       <template v-if="view === 'list'">
         <p v-if="listNotice" class="admin-success" role="status">

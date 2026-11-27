@@ -19,7 +19,42 @@ const jsonResponse = (
   body: JSON.stringify(body),
 });
 
-test("Admin shows the login view and is not indexed", async ({ page }) => {
+// SPEC 04: the browser asks /api/auth/session/ for a short-lived access
+// token; `astro preview` serves no on-demand routes, so every admin test
+// stubs this endpoint instead of hitting the Worker.
+const SESSION_PAYLOAD = {
+  token: "write-token",
+  login: "tester",
+  expiresAt: Date.now() + 60 * 60 * 1000,
+  canWrite: true,
+};
+
+const stubSession = (page: Page, payload: unknown, status = 200): void => {
+  page.route("**/api/auth/session/", (route) =>
+    route.fulfill({
+      status,
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    }),
+  );
+};
+
+const stubPostListings = (page: Page): void => {
+  page.route("https://api.github.com/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (
+      url.pathname ===
+        `/repos/${OWNER}/${REPO}/contents/src/content/posts/en` ||
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+};
+
+test("Admin shows the login card when unauthenticated", async ({ page }) => {
+  stubSession(page, { error: "unauthenticated" }, 401);
   await page.goto("/admin/");
 
   await expect(
@@ -28,18 +63,15 @@ test("Admin shows the login view and is not indexed", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Connect with GitHub", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("GitHub token")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save token" })).toBeVisible();
+  await expect(page.getByRole("alert")).toBeHidden();
 
-  const tokenLink = page.getByRole("link", {
-    name: /Open the token creation page/,
+  const loginLink = page.getByRole("link", {
+    name: /Connect with GitHub/,
   });
-  await expect(tokenLink).toHaveAttribute(
+  await expect(loginLink).toHaveAttribute(
     "href",
-    /github\.com\/settings\/personal-access-tokens\/new/,
+    /^\/api\/auth\/login\/\?next=%2Fadmin%2F$/,
   );
-  await expect(tokenLink).toHaveAttribute("href", /contents=write/);
-  await expect(tokenLink).toHaveAttribute("href", /target_name=akobashikawa/);
 
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
@@ -52,114 +84,51 @@ test("Admin is blocked in robots.txt", async ({ request }) => {
   expect(await response.text()).toContain("Disallow: /admin/");
 });
 
-test("Admin rejects a token that cannot write", async ({ page }) => {
-  await page.route("https://api.github.com/**", async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    if (request.method() === "OPTIONS") {
-      return route.fulfill({ status: 204, headers: CORS });
-    }
-    if (url.pathname === `/repos/${OWNER}/${REPO}`) {
-      // The user has push access; only the token's write scope is missing.
-      return route.fulfill(jsonResponse({ permissions: { push: true } }));
-    }
-    if (url.pathname === "/user") {
-      return route.fulfill(jsonResponse({ login: "reader" }));
-    }
-    if (
-      request.method() === "POST" &&
-      url.pathname === `/repos/${OWNER}/${REPO}/git/blobs`
-    ) {
-      return route.fulfill(
-        jsonResponse(
-          { message: "Resource not accessible by personal access token" },
-          {},
-          403,
-        ),
-      );
-    }
-    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+test("Admin shows the permission error when the session cannot write", async ({
+  page,
+}) => {
+  stubSession(page, {
+    token: "read-token",
+    login: "reader",
+    expiresAt: Date.now() + 60 * 60 * 1000,
+    canWrite: false,
   });
+  await page.goto("/admin/");
+
+  await expect(page.getByRole("alert")).toContainText(/write access/i);
+  await expect(page.getByText("@reader")).toBeHidden();
+});
+
+test("Admin loads the list with a session and purges legacy keys", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.github.token", "legacy-token");
+    localStorage.setItem("grimorio.github.writeVerified", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  stubPostListings(page);
 
   await page.goto("/admin/");
-  await page.getByLabel("GitHub token").fill("read-only-token");
-  await page.getByRole("button", { name: "Save token" }).click();
-
-  await expect(page.getByRole("alert")).toContainText(/write check/i);
-  await expect(page.getByRole("alert")).toContainText(
-    /Contents: Read and write/,
-  );
+  await expect(page.getByText("@tester")).toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem("grimorio.admin")),
+  ).toBe("1");
   expect(
     await page.evaluate(() => localStorage.getItem("grimorio.github.token")),
   ).toBeNull();
-});
-
-test("Admin accepts a write-capable token and caches the write check", async ({
-  page,
-}) => {
-  let blobCalls = 0;
-  await page.route("https://api.github.com/**", async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    if (request.method() === "OPTIONS") {
-      return route.fulfill({ status: 204, headers: CORS });
-    }
-    if (url.pathname === `/repos/${OWNER}/${REPO}`) {
-      return route.fulfill(
-        jsonResponse(
-          { permissions: { push: true } },
-          {
-            "github-authentication-token-expiration": "2027-01-01 00:00:00 UTC",
-          },
-        ),
-      );
-    }
-    if (url.pathname === "/user") {
-      return route.fulfill(jsonResponse({ login: "tester" }));
-    }
-    if (
-      request.method() === "POST" &&
-      url.pathname === `/repos/${OWNER}/${REPO}/git/blobs`
-    ) {
-      blobCalls += 1;
-      return route.fulfill(jsonResponse({ sha: "blob" }, {}, 201));
-    }
-    if (
-      url.pathname ===
-        `/repos/${OWNER}/${REPO}/contents/src/content/posts/en` ||
-      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
-    ) {
-      return route.fulfill(jsonResponse([]));
-    }
-    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
-  });
-
-  await page.goto("/admin/");
-  await page.getByLabel("GitHub token").fill("write-token");
-  await page.getByRole("button", { name: "Save token" }).click();
-
-  await expect(page.getByText("@tester")).toBeVisible();
-  expect(
-    await page.evaluate(() => localStorage.getItem("grimorio.github.token")),
-  ).toBe("write-token");
   expect(
     await page.evaluate(() =>
       localStorage.getItem("grimorio.github.writeVerified"),
     ),
-  ).toBe("1");
-  expect(blobCalls).toBe(1);
-
-  await page.reload();
-  await expect(page.getByText("@tester")).toBeVisible();
-  expect(blobCalls).toBe(1);
+  ).toBeNull();
 });
 
 test("New post creates one file in the chosen language", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("grimorio.github.token", "write-token");
-    localStorage.setItem("grimorio.github.user", "tester");
-    localStorage.setItem("grimorio.github.writeVerified", "1");
+    localStorage.setItem("grimorio.admin", "1");
   });
+  stubSession(page, SESSION_PAYLOAD);
 
   const contents = `/repos/${OWNER}/${REPO}/contents/src/content/posts`;
   const puts: {
@@ -173,12 +142,6 @@ test("New post creates one file in the chosen language", async ({ page }) => {
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
       return route.fulfill({ status: 204, headers: CORS });
-    }
-    if (url.pathname === `/repos/${OWNER}/${REPO}`) {
-      return route.fulfill(jsonResponse({ permissions: { push: true } }));
-    }
-    if (url.pathname === "/user") {
-      return route.fulfill(jsonResponse({ login: "tester" }));
     }
     if (
       url.pathname === `${contents}/en` ||
@@ -252,10 +215,9 @@ test("New post creates one file in the chosen language", async ({ page }) => {
 
 test("Admin prefills a translation from the query", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("grimorio.github.token", "write-token");
-    localStorage.setItem("grimorio.github.user", "tester");
-    localStorage.setItem("grimorio.github.writeVerified", "1");
+    localStorage.setItem("grimorio.admin", "1");
   });
+  stubSession(page, SESSION_PAYLOAD);
 
   const contents = `/repos/${OWNER}/${REPO}/contents/src/content/posts`;
   const source = [
@@ -279,12 +241,6 @@ test("Admin prefills a translation from the query", async ({ page }) => {
     const url = new URL(request.url());
     if (request.method() === "OPTIONS") {
       return route.fulfill({ status: 204, headers: CORS });
-    }
-    if (url.pathname === `/repos/${OWNER}/${REPO}`) {
-      return route.fulfill(jsonResponse({ permissions: { push: true } }));
-    }
-    if (url.pathname === "/user") {
-      return route.fulfill(jsonResponse({ login: "tester" }));
     }
     if (
       url.pathname === `${contents}/en` ||
@@ -326,7 +282,7 @@ test("Admin prefills a translation from the query", async ({ page }) => {
   );
 });
 
-test("404 hides the missing-post shortcut without a token", async ({
+test("404 hides the missing-post shortcut when not signed in", async ({
   page,
 }) => {
   const html = await missingTranslation404(page);
@@ -338,11 +294,9 @@ test("404 hides the missing-post shortcut without a token", async ({
   await expect(page.locator("#missing-post-link")).toBeHidden();
 });
 
-test("404 offers the missing translation when a token is stored", async ({
-  page,
-}) => {
+test("404 offers the missing translation when signed in", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("grimorio.github.token", "write-token");
+    localStorage.setItem("grimorio.admin", "1");
   });
 
   const html = await missingTranslation404(page);

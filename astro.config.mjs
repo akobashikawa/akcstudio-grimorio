@@ -94,9 +94,18 @@ export default defineConfig({
   output: "static",
   trailingSlash: "always",
 
-  // The site is fully prerendered and never touches Astro.session; disabling
-  // sessions avoids an unused Cloudflare KV binding ("SESSION").
-  session: false,
+  // The admin session for src/pages/api/auth/*. The Cloudflare adapter
+  // provisions the "SESSION" KV binding automatically; the cookie holds
+  // only a session id, so no secret reaches the browser.
+  session: {
+    cookie: {
+      name: "grimorio-admin",
+      sameSite: "lax",
+      // Only production serves over HTTPS; localhost drops secure cookies.
+      secure: process.env.NODE_ENV === "production",
+    },
+    ttl: 60 * 60 * 24 * 90, // 90 days
+  },
 
   // Preserve the spacing between inline elements when migrating from Astro 5.
   compressHTML: true,

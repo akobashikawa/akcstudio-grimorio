@@ -7,22 +7,22 @@ const props = defineProps<{
   slug: string;
 }>();
 
-const hasToken = ref(false);
+const signedIn = ref(false);
 const href = `/admin/?lang=${encodeURIComponent(props.lang)}&slug=${encodeURIComponent(
   props.slug,
 )}`;
 
 onMounted(() => {
   try {
-    hasToken.value = Boolean(localStorage.getItem(ADMIN_STORAGE_KEYS.token));
+    signedIn.value = localStorage.getItem(ADMIN_STORAGE_KEYS.signedIn) === "1";
   } catch {
-    hasToken.value = false;
+    signedIn.value = false;
   }
 });
 </script>
 
 <template>
-  <a v-if="hasToken" class="btn secondary edit-post-link" :href="href">
+  <a v-if="signedIn" class="btn secondary edit-post-link" :href="href">
     <span class="icon-[lucide--pencil]" aria-hidden="true"></span>
     Edit
   </a>

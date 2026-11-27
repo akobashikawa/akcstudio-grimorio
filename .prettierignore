@@ -8,3 +8,7 @@ test-results/
 playwright-report/
 pnpm-lock.yaml
 worker-configuration.d.ts
+
+# Content is authored from the admin, Pages CMS or Obsidian; the frontmatter
+# is validated by `pnpm check:posts`, not by Prettier.
+src/content/posts/
