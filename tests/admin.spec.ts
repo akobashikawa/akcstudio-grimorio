@@ -537,6 +537,238 @@ test("List sends an expired session to the login card", async ({ page }) => {
   ).toBeNull();
 });
 
+const deployRun = (over: Record<string, unknown> = {}) => ({
+  path: ".github/workflows/deploy.yml",
+  head_sha: "commit-sha",
+  status: "queued",
+  conclusion: null,
+  html_url:
+    "https://github.com/akobashikawa/akcstudio-grimorio/actions/runs/123",
+  created_at: "2026-11-27T18:00:00Z",
+  run_started_at: "2026-11-27T18:00:10Z",
+  updated_at: "2026-11-27T18:00:30Z",
+  ...over,
+});
+
+const actionsResponse = (runs: Record<string, unknown>[] | null) =>
+  jsonResponse({ total_count: runs?.length ?? 0, workflow_runs: runs ?? [] });
+
+test("Deploy indicator follows the workflow after a save", async ({ page }) => {
+  // Advance the mocked clock instead of waiting for the real 10 s polling.
+  await page.clock.install({ time: new Date("2026-11-27T18:00:00Z") });
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+
+  // One state per poll: no run yet, queued, in progress, success.
+  const states: (Record<string, unknown> | null)[] = [
+    null,
+    deployRun(),
+    deployRun({ status: "in_progress", run_started_at: null }),
+    deployRun({
+      status: "completed",
+      conclusion: "success",
+      updated_at: "2026-11-27T18:02:30Z",
+    }),
+    deployRun({
+      status: "completed",
+      conclusion: "success",
+      updated_at: "2026-11-27T18:02:30Z",
+    }),
+    deployRun({
+      status: "completed",
+      conclusion: "success",
+      updated_at: "2026-11-27T18:02:30Z",
+    }),
+  ];
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "PUT") {
+      return route.fulfill(
+        jsonResponse({
+          content: { sha: "file-sha-2" },
+          commit: { sha: "commit-sha" },
+        }),
+      );
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  // Registered after the api.github.com route: Playwright matches routes in
+  // reverse registration order, so this one wins for /actions/runs.
+  await page.route("**/actions/runs*", (route) => {
+    const state = states.shift() ?? null;
+    return route.fulfill(actionsResponse(state ? [state] : null));
+  });
+
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page
+    .getByRole("button", { name: /Welcome en\/welcome/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Edit post", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  await expect(page.locator(".admin-deploy")).toContainText("Deploy queued");
+
+  await page.clock.runFor(21_000);
+  await expect(page.locator(".admin-deploy")).toContainText(
+    /Deploying… \d+:\d\d/,
+  );
+  await expect(
+    page.locator(".admin-deploy").getByRole("link", { name: /View run/ }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/akobashikawa/akcstudio-grimorio/actions/runs/123",
+  );
+
+  await page.clock.runFor(21_000);
+  await expect(page.locator(".admin-deploy")).toContainText(/Live · \d+:\d\d/);
+});
+
+test("Deploy indicator reports a missing Actions permission", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-11-27T18:00:00Z") });
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "PUT") {
+      return route.fulfill(
+        jsonResponse({
+          content: { sha: "file-sha-2" },
+          commit: { sha: "commit-sha" },
+        }),
+      );
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  // Registered after the api.github.com route (reverse registration order).
+  await page.route("**/actions/runs*", (route) =>
+    route.fulfill({ status: 403, headers: CORS, body: "{}" }),
+  );
+
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page
+    .getByRole("button", { name: /Welcome en\/welcome/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  await expect(page.locator(".admin-deploy")).toContainText(
+    "Deploy status unavailable",
+  );
+  // Editing keeps working with the stalled indicator.
+  await expect(
+    page.getByRole("heading", { name: "Edit post", exact: true }),
+  ).toBeVisible();
+});
+
+test("Deploy indicator waits for the run to appear", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-27T18:00:00Z") });
+  await page.addInitScript(() => {
+    localStorage.setItem("grimorio.admin", "1");
+  });
+  stubSession(page, SESSION_PAYLOAD);
+  await page.route("https://api.github.com/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/en`
+    ) {
+      return route.fulfill(welcomeListing());
+    }
+    if (
+      url.pathname === `/repos/${OWNER}/${REPO}/contents/src/content/posts/es`
+    ) {
+      return route.fulfill(jsonResponse([]));
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "GET") {
+      return route.fulfill(fileResponse());
+    }
+    if (url.pathname === WELCOME_PATH && request.method() === "PUT") {
+      return route.fulfill(
+        jsonResponse({
+          content: { sha: "file-sha-2" },
+          commit: { sha: "commit-sha" },
+        }),
+      );
+    }
+    return route.fulfill({ status: 404, headers: CORS, body: "{}" });
+  });
+  // Registered after the api.github.com route (reverse registration order).
+  await page.route("**/actions/runs*", (route) =>
+    route.fulfill(actionsResponse(null)),
+  );
+
+  await page.goto("/admin/");
+  await expect(page.getByText("@tester")).toBeVisible();
+
+  await page
+    .getByRole("button", { name: /Welcome en\/welcome/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  await expect(page.locator(".admin-deploy")).toContainText("Deploy queued");
+  await page.clock.runFor(2 * 60_000 + 21_000);
+
+  await expect(page.locator(".admin-deploy")).toContainText(
+    "Deploy not started yet",
+  );
+  await expect(
+    page.locator(".admin-deploy").getByRole("link", { name: /View run/ }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/akobashikawa/akcstudio-grimorio/actions/workflows/deploy.yml",
+  );
+});
 async function missingTranslation404(page: Page): Promise<string> {
   const response = await page.request.get("/es/404.html");
   const html = await response.text();
