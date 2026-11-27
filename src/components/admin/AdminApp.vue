@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import type { Category } from "../../data/post-options";
 import type { AdminRepoConfig } from "../../lib/admin-config";
 import {
@@ -15,9 +15,11 @@ import {
   getPost,
   GithubApiError,
   isValidSlug,
+  listDeployRuns,
   listPosts,
   type CreatePostPrefill,
   type CreatePostResult,
+  type DeployRun,
   type PostSummary,
 } from "../../lib/github-content";
 import { today, type PostLanguage } from "../../lib/frontmatter";
@@ -48,6 +50,89 @@ const createPrefill = ref<CreatePostPrefill | null>(null);
 const createNotice = ref("");
 const listNotice = ref("");
 const deleting = ref(false);
+
+type DeployStatus = {
+  sha: string; // commit being deployed
+  status: DeployRun["status"];
+  conclusion: DeployRun["conclusion"];
+  htmlUrl: string;
+  startedAt: number; // epoch ms used by the elapsed counter
+  error?: "forbidden" | "unavailable";
+};
+
+const deploy = ref<DeployStatus | null>(null);
+const deployNow = ref(Date.now()); // ticks once per second for the counter
+let deployPoll: ReturnType<typeof setInterval> | null = null;
+let deployClock: ReturnType<typeof setInterval> | null = null;
+let deployDeadline = 0;
+
+function stopDeployTracking() {
+  if (deployPoll !== null) clearInterval(deployPoll);
+  if (deployClock !== null) clearInterval(deployClock);
+  deployPoll = null;
+  deployClock = null;
+}
+
+/** Follow the Deploy workflow run for a commit the admin just wrote. */
+function trackDeploy(commitSha: string) {
+  const current = session.value;
+  if (!current || !commitSha) return;
+  stopDeployTracking();
+  deployDeadline = Date.now() + 15 * 60 * 1000;
+  deploy.value = {
+    sha: commitSha,
+    status: "queued",
+    conclusion: null,
+    htmlUrl: "",
+    startedAt: Date.now(),
+  };
+  deployNow.value = Date.now();
+
+  const poll = async () => {
+    const payload = session.value;
+    const target = deploy.value;
+    if (!payload || !target || Date.now() > deployDeadline) {
+      stopDeployTracking();
+      return;
+    }
+    deployNow.value = Date.now();
+    try {
+      const run = await listDeployRuns(props.repo, payload.token, target.sha);
+      if (deploy.value?.sha !== target.sha) return; // superseded by a new save
+      if (run) {
+        deploy.value = {
+          ...target,
+          status: run.status,
+          conclusion: run.conclusion,
+          htmlUrl: run.htmlUrl,
+          startedAt: run.runStartedAt
+            ? Date.parse(run.runStartedAt)
+            : target.startedAt,
+        };
+        if (run.status === "completed") stopDeployTracking();
+        return;
+      }
+      if (Date.now() > target.startedAt + 2 * 60 * 1000) {
+        deploy.value = { ...target, error: "unavailable" };
+        stopDeployTracking();
+      }
+    } catch (reason) {
+      stopDeployTracking();
+      if (
+        deploy.value?.sha === target.sha &&
+        reason instanceof GithubApiError &&
+        reason.status === 403
+      ) {
+        deploy.value = { ...target, error: "forbidden" };
+      }
+      // 401 or network failures stop the tracking silently.
+    }
+  };
+
+  void poll();
+  deployPoll = setInterval(poll, 10_000);
+  deployClock = setInterval(() => (deployNow.value = Date.now()), 1000);
+}
 const fallbackCategory: Category = props.categories.includes(
   "notes" as Category,
 )
@@ -55,8 +140,7 @@ const fallbackCategory: Category = props.categories.includes(
   : (props.categories[0] ?? "notes");
 
 onMounted(async () => {
-  clearLegacySession();
-  try {
+  clearLegacySession();  try {
     const payload = await fetchSession();
     if (!payload) {
       return; // Unauthenticated: the login card shows below.
@@ -78,6 +162,8 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+onUnmounted(stopDeployTracking);
 
 async function loadPosts() {
   const current = session.value;
@@ -109,6 +195,8 @@ async function loadPosts() {
 
 function logout() {
   forgetSignedIn();
+  stopDeployTracking();
+  deploy.value = null;
   session.value = null;
   posts.value = [];
   postsError.value = "";
@@ -163,7 +251,7 @@ async function removePost(post: PostSummary) {
   deleting.value = true;
   postsError.value = "";
   try {
-    await deletePost(props.repo, current.token, post.lang, post.slug);
+    const result = await deletePost(props.repo, current.token, post.lang, post.slug);
     posts.value = posts.value.filter(
       (candidate) =>
         candidate.lang !== post.lang || candidate.slug !== post.slug,
@@ -173,6 +261,7 @@ async function removePost(post: PostSummary) {
     selectedPost.value = null;
     createPrefill.value = null;
     updateQuery();
+    trackDeploy(result.commitSha);
   } catch (reason) {
     if (reason instanceof GithubApiError && reason.status === 401) {
       onUnauthorized();
@@ -206,6 +295,7 @@ async function onPostCreated(result: CreatePostResult) {
   createPrefill.value = null;
   listNotice.value = `Created posts/${result.lang}/${result.slug}.md.`;
   updateQuery();
+  trackDeploy(result.commitSha);
 }
 
 function onUnauthorized() {
