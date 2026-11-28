@@ -207,6 +207,28 @@ test("Mermaid diagrams render, toggle their source, and follow the theme", async
     page.locator("pre:has(code.language-mermaid) .copy-code"),
   ).toHaveCount(0);
   await expect(page.locator(".copy-code")).toHaveCount(cmsPost.codeBlocks);
+  // The frame is re-derived from the content: the bbox must sit inside the
+  // viewBox with the 8px padding (Mermaid's own viewBox is not trusted).
+  const framed = await page
+    .locator(".mermaid-canvas svg")
+    .first()
+    .evaluate((svg) => {
+      const svgEl = svg as unknown as SVGSVGElement;
+      const box = svgEl.getBBox();
+      const viewBox = svgEl.viewBox.baseVal;
+      return {
+        inside:
+          box.x >= viewBox.x &&
+          box.y >= viewBox.y &&
+          box.x + box.width <= viewBox.x + viewBox.width &&
+          box.y + box.height <= viewBox.y + viewBox.height,
+        padding:
+          Math.abs(box.x - viewBox.x - 8) < 1 &&
+          Math.abs(box.y - viewBox.y - 8) < 1,
+      };
+    });
+  expect(framed.inside).toBe(true);
+  expect(framed.padding).toBe(true);
   // Labels are SVG text: Mermaid's HTML-in-foreignObject measurement
   // produces huge broken layouts on Windows Chromium.
   await expect(
@@ -268,7 +290,7 @@ test("An implausible Mermaid layout falls back to the source", async ({
   page,
 }) => {
   // Simulate a browser whose label measurement breaks (Windows Chromium):
-  // the fake engine always returns a 20000x20000 layout.
+  // the fake engine always returns a diagram with 20000x20000 of content.
   await page.route("**/mermaid.core.*.js", (route) =>
     route.fulfill({
       status: 200,
@@ -277,7 +299,7 @@ test("An implausible Mermaid layout falls back to the source", async ({
         "export default {",
         "  initialize() {},",
         "  render: async () => ({",
-        '    svg: \'<svg viewBox="0 0 20000 20000" width="20000" height="20000"><text x="10" y="30">huge</text></svg>\',',
+        '    svg: \'<svg viewBox="0 0 20000 20000" width="20000" height="20000"><rect width="20000" height="20000"/></svg>\',',
         "    bindFunctions: () => {},",
         "  }),",
         "};",
@@ -389,6 +411,61 @@ test("Diagrams that fit do not pan; scrollable ones respond to keys", async ({
   await expect
     .poll(() => sequence.evaluate((node) => node.scrollLeft))
     .toBeGreaterThan(0);
+});
+
+test("A shifted viewBox is re-derived from the rendered content", async ({
+  page,
+}) => {
+  // Simulate Windows Chromium: Mermaid computes the frame from the wrong
+  // origin (viewBox at -93) while the content sits at 12,12, clipping the
+  // right and bottom edges.
+  await page.route("**/mermaid.core.*.js", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: [
+        "export default {",
+        "  initialize() {},",
+        "  render: async () => ({",
+        '    svg: \'<svg viewBox="-93 -93 391.9774169921875 663.4000244140625" width="391.9774169921875" height="663.4000244140625"><rect x="12" y="12" width="363.9774169921875" height="615.3999633789062"/></svg>\',',
+        "    bindFunctions: () => {},",
+        "  }),",
+        "};",
+      ].join("\n"),
+    }),
+  );
+  await page.goto(`/posts/${cmsPost.slug}/`);
+  await expect(
+    page.locator('figure[data-mermaid-state="rendered"]'),
+  ).toHaveCount(cmsPost.diagrams, { timeout: 15_000 });
+  // The content is re-framed: viewBox, width and height come from the bbox
+  // with 8px of padding, so nothing is clipped and no side is empty.
+  const frames = await page.locator(".mermaid-canvas svg").evaluateAll((svgs) =>
+    svgs.map((raw) => {
+      const svg = raw as unknown as SVGSVGElement;
+      const box = svg.getBBox();
+      const viewBox = svg.viewBox.baseVal;
+      return {
+        viewBox: [viewBox.x, viewBox.y, viewBox.width, viewBox.height],
+        contentInside:
+          box.x >= viewBox.x &&
+          box.y >= viewBox.y &&
+          box.x + box.width <= viewBox.x + viewBox.width &&
+          box.y + box.height <= viewBox.y + viewBox.height,
+        paddingOk:
+          Math.abs(box.x - viewBox.x - 8) < 1 &&
+          Math.abs(box.y - viewBox.y - 8) < 1,
+        width: Number(svg.getAttribute("width")),
+        height: Number(svg.getAttribute("height")),
+      };
+    }),
+  );
+  for (const frame of frames) {
+    expect(frame.contentInside).toBe(true);
+    expect(frame.paddingOk).toBe(true);
+    expect(frame.width).toBeCloseTo(frame.viewBox[2], 0);
+    expect(frame.height).toBeCloseTo(frame.viewBox[3], 0);
+  }
 });
 
 test("The Mermaid engine is not requested on pages without diagrams", async ({
