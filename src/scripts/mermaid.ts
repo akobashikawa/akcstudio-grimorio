@@ -181,11 +181,9 @@ export function createMermaidRenderer(options: {
   const renderer: MermaidRenderer = {
     render: () => {
       // One pass at a time: Mermaid shares global state between renders.
-      running = running
-        .then(runPass)
-        .catch(() => {
-          /* Each diagram reports its own failure. */
-        });
+      running = running.then(runPass).catch(() => {
+        /* Each diagram reports its own failure. */
+      });
       return running;
     },
     destroy: () => {

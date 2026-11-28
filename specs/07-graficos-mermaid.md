@@ -142,7 +142,7 @@ Convenciones:
 - [ ] Tras renderizar, el `<pre>` fuente está oculto; **View diagram source** lo muestra y lo vuelve a ocultar con `aria-expanded` correcto.
 - [ ] Sin JavaScript, el texto del fence `mermaid` sigue visible en `#article-body`.
 - [ ] Al cambiar a tema oscuro, cada figura pasa a `data-mermaid-theme="dark"` y vuelve a tener `<svg>` sin errores en consola.
-- [ ] Mermaid no se descarga en páginas sin diagramas (`/`, `/about/`, `/posts/welcome/`).
+- [ ] El motor de Mermaid (`mermaid.core`, `mermaid-parser`, chunks de diagramas) no se descarga en páginas sin diagramas (`/`, `/about/`, `/posts/welcome/`); solo se carga el chunk-facade de ~5 KB que genera Vite.
 - [ ] En `/admin/`, la preview de un post con un fence `mermaid` válido muestra el `<svg>`; con sintaxis inválida muestra el código y un aviso con `role="status"`, sin romper la edición.
 - [ ] Cada `<svg>` renderizado tiene nombre accesible (`<title>` de `accTitle` o `aria-label`).
 - [ ] A 375 px el artículo no genera scroll horizontal.
@@ -161,6 +161,7 @@ Convenciones:
 - **Sí:** `securityLevel: "strict"`. El autor es de confianza, pero el contenido también pasa por Pages CMS; strict desactiva HTML y clics dentro del SVG.
 - **Sí:** no ampliar el perfil de DOMPurify. El SVG se inyecta con la API del DOM tras `mermaid.render()`, no con `v-html`, y Mermaid sanea las etiquetas con strict.
 - **Sí:** cola de render y token por figura. Mermaid usa estado global; dos renders simultáneos o un cambio de tema a mitad de render producen SVG corruptos.
+- **Sí:** aceptar el chunk-facade de ~5 KB. El import dinámico de `mermaid` produce un chunk (`mermaid.*.js`) que Vite enlaza estáticamente en las páginas de post; contiene solo el mapa de dependencias del preload, sin código de Mermaid. El motor real (85 KB + chunks de diagramas) se pide solo donde hay diagramas.
 - **Sí:** arreglar el fence de EN y migrar solo el diagrama seleccionado. Son los dos casos que el autor ya señaló; migrar todo el ASCII es trabajo editorial con riesgo de perder matices.
 - **No:** SVG en build. Añade un navegador headless al workflow Deploy y hace el build más lento y frágil por un beneficio marginal en un blog personal.
 - **No:** SVG o HTML renderizado en RSS/`llms.txt`. Muchos lectores ignoran SVG inline; el fence es una representación textual honesta del diagrama.

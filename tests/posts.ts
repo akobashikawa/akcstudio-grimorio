@@ -22,7 +22,9 @@ export type PostFixture = {
   draft: boolean;
   /** Number of `##` headings in the body. */
   headings: number;
-  /** Number of fenced code blocks in the body. */
+  /** Number of fenced Mermaid blocks in the body. */
+  diagrams: number;
+  /** Number of fenced code blocks excluding Mermaid (they get a copy button). */
   codeBlocks: number;
 };
 
@@ -43,6 +45,8 @@ function parsePost(lang: Language, file: string): PostFixture {
     readFileSync(join(postsDirectory, lang, file), "utf8"),
   );
   const tags = new RegExp(`^tags:\\s*\\[(.*?)\\]`, "m").exec(data)?.[1] ?? "";
+  const fences = body.match(/^```\S*/gm) ?? [];
+  const diagrams = fences.filter((fence) => fence === "```mermaid").length;
   return {
     slug,
     title: field(data, "title"),
@@ -53,7 +57,8 @@ function parsePost(lang: Language, file: string): PostFixture {
     featured: field(data, "featured") === "true",
     draft: field(data, "draft") === "true",
     headings: (body.match(/^## /gm) ?? []).length,
-    codeBlocks: Math.floor((body.match(/^```/gm) ?? []).length / 2),
+    diagrams,
+    codeBlocks: fences.length / 2 - diagrams,
   };
 }
 
