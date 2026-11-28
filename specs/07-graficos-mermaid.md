@@ -146,6 +146,7 @@ Convenciones:
 - [ ] En `/admin/`, la preview de un post con un fence `mermaid` válido muestra el `<svg>`; con sintaxis inválida muestra el código y un aviso con `role="status"`, sin romper la edición.
 - [ ] Cada `<svg>` renderizado tiene nombre accesible (`<title>` de `accTitle` o `aria-label`).
 - [ ] A 375 px el artículo no genera scroll horizontal.
+- [ ] El flowchart ancho se muestra a escala 1:1 (`width` = ancho del `viewBox`) y su contenedor activa scroll horizontal en vez de encoger el texto.
 - [ ] `writing-with-markdown` (EN/ES) documenta la sintaxis y su ejemplo se renderiza.
 - [ ] `README.md` documenta la sintaxis, la carga diferida, el tema, el fallback y el límite en feeds.
 - [ ] `pnpm format:check`, `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
@@ -162,6 +163,7 @@ Convenciones:
 - **Sí:** no ampliar el perfil de DOMPurify. El SVG se inyecta con la API del DOM tras `mermaid.render()`, no con `v-html`, y Mermaid sanea las etiquetas con strict.
 - **Sí:** cola de render y token por figura. Mermaid usa estado global; dos renders simultáneos o un cambio de tema a mitad de render producen SVG corruptos.
 - **Sí:** aceptar el chunk-facade de ~5 KB. El import dinámico de `mermaid` produce un chunk (`mermaid.*.js`) que Vite enlaza estáticamente en las páginas de post; contiene solo el mapa de dependencias del preload, sin código de Mermaid. El motor real (85 KB + chunks de diagramas) se pide solo donde hay diagramas.
+- **Sí:** tamaño natural con scroll horizontal. El SVG se post-procesa tras el render: `width` se fija al ancho del `viewBox` y se retira el `max-width`, de modo que un diagrama ancho se lee a escala 1:1 y el contenedor hace scroll (igual que los bloques de código). Encoger el SVG al ancho de la columna dejaba el texto ilegible en flowcharts anchos. El post-proceso es genérico y no exige configurar `useMaxWidth` tipo a tipo.
 - **Sí:** arreglar el fence de EN y migrar solo el diagrama seleccionado. Son los dos casos que el autor ya señaló; migrar todo el ASCII es trabajo editorial con riesgo de perder matices.
 - **No:** SVG en build. Añade un navegador headless al workflow Deploy y hace el build más lento y frágil por un beneficio marginal en un blog personal.
 - **No:** SVG o HTML renderizado en RSS/`llms.txt`. Muchos lectores ignoran SVG inline; el fence es una representación textual honesta del diagrama.
@@ -172,17 +174,17 @@ Convenciones:
 
 ## Risks
 
-| Risk                                                        | Mitigation                                                                                                                                |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| El chunk de Mermaid pesa ~1 MB sin comprimir                | Import diferido solo cuando hay diagramas; el `<pre>` sigue visible hasta que el SVG está listo, así que no hay hueco en blanco.          |
-| Mermaid comparte estado global entre renders                | Render secuencial en cola y `initialize()` antes de cada lote.                                                                            |
-| El usuario cambia de tema mientras un diagrama se renderiza | Contador por figura: solo se aplica el resultado de la última pasada.                                                                     |
-| Sintaxis Mermaid inválida                                   | Estado `error`, fuente visible y aviso con `role="status"`; `console.warn` en lugar de `console.error` para no romper el test de consola. |
-| Dos diagramas generan ids repetidos                         | Contador monotónico `mermaid-diagram-N` por página/preview.                                                                               |
-| Un diagrama ancho rompe el layout móvil                     | `.mermaid-canvas` con `overflow-x: auto` y `svg { max-width: 100% }`; el test de layout ya comprueba `scrollWidth`.                       |
-| El fixture de `codeBlocks` deja de cuadrar                  | `tests/posts.ts` separa `diagrams` de `codeBlocks`; el test de `.copy-code` sigue usando solo bloques de código.                          |
-| El SVG inyectado escapa al saneado de la preview            | `securityLevel: "strict"` en Mermaid y SVG insertado con `createElement`, nunca con `v-html`.                                             |
-| Un error de render bloquea el resto de la página            | Cada figura captura su error; un diagrama roto no impide renderizar los demás.                                                            |
+| Risk                                                        | Mitigation                                                                                                                                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El chunk de Mermaid pesa ~1 MB sin comprimir                | Import diferido solo cuando hay diagramas; el `<pre>` sigue visible hasta que el SVG está listo, así que no hay hueco en blanco.                                 |
+| Mermaid comparte estado global entre renders                | Render secuencial en cola y `initialize()` antes de cada lote.                                                                                                   |
+| El usuario cambia de tema mientras un diagrama se renderiza | Contador por figura: solo se aplica el resultado de la última pasada.                                                                                            |
+| Sintaxis Mermaid inválida                                   | Estado `error`, fuente visible y aviso con `role="status"`; `console.warn` en lugar de `console.error` para no romper el test de consola.                        |
+| Dos diagramas generan ids repetidos                         | Contador monotónico `mermaid-diagram-N` por página/preview.                                                                                                      |
+| Un diagrama ancho rompe el layout móvil                     | `.mermaid-canvas` con `overflow-x: auto`: el diagrama se muestra a escala 1:1 y hace scroll dentro del contenedor; el test de layout ya comprueba `scrollWidth`. |
+| El fixture de `codeBlocks` deja de cuadrar                  | `tests/posts.ts` separa `diagrams` de `codeBlocks`; el test de `.copy-code` sigue usando solo bloques de código.                                                 |
+| El SVG inyectado escapa al saneado de la preview            | `securityLevel: "strict"` en Mermaid y SVG insertado con `createElement`, nunca con `v-html`.                                                                    |
+| Un error de render bloquea el resto de la página            | Cada figura captura su error; un diagrama roto no impide renderizar los demás.                                                                                   |
 
 ## What is **not** in this spec
 

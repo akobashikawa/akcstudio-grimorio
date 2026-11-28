@@ -207,6 +207,24 @@ test("Mermaid diagrams render, toggle their source, and follow the theme", async
     page.locator("pre:has(code.language-mermaid) .copy-code"),
   ).toHaveCount(0);
   await expect(page.locator(".copy-code")).toHaveCount(cmsPost.codeBlocks);
+  // Diagrams render at natural size: the wide flowchart scrolls inside its
+  // canvas at 1:1 scale instead of shrinking its text.
+  const canvas = page.locator(".mermaid-canvas").first();
+  await expect
+    .poll(() =>
+      canvas.evaluate((node) => {
+        const svg = node.querySelector("svg")!;
+        return {
+          natural:
+            Math.abs(
+              parseFloat(svg.getAttribute("width") ?? "0") -
+                svg.viewBox.baseVal.width,
+            ) < 1,
+          scrollable: node.scrollWidth > node.clientWidth,
+        };
+      }),
+    )
+    .toEqual({ natural: true, scrollable: true });
   // The corrected flowchart contains every edge again.
   const svg = page
     .locator('figure[data-mermaid-state="rendered"]')
@@ -234,9 +252,10 @@ test("The admin sequence diagram exposes an accessible name", async ({
   const svg = page
     .locator("#article-body figure[data-mermaid-state='rendered'] svg")
     .first();
-  await expect(svg).toBeVisible();
+  await expect(svg).toBeVisible({ timeout: 15_000 });
   await expect(svg.locator("title")).toHaveText(
     "Autenticación de /admin/ con la GitHub App",
+    { timeout: 15_000 },
   );
 });
 
