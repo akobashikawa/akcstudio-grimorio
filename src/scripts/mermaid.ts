@@ -208,36 +208,40 @@ export function createMermaidRenderer(options: {
       // Mermaid sanitizes its output under securityLevel: "strict"; the SVG
       // enters the DOM through a range fragment, never through v-html.
       const fragment = document.createRange().createContextualFragment(svg);
-      const rendered = fragment.querySelector("svg");
+      const rendered = fragment.querySelector("svg") as SVGSVGElement | null;
+      diagram.canvas.replaceChildren(fragment);
       if (rendered) {
-        // Render at natural size: a wide diagram scrolls inside the canvas
-        // instead of shrinking its text to an illegible scale. Read the
-        // viewBox from the attribute: some browsers fail on baseVal of a
-        // detached SVG.
-        const [, , naturalWidth, naturalHeight] = (
-          rendered.getAttribute("viewBox") ?? ""
-        )
-          .split(/\s+/)
-          .map(Number);
-        if (naturalWidth > MAX_DIMENSION || naturalHeight > MAX_DIMENSION) {
+        // Mermaid's viewBox is unreliable across browsers (Windows Chromium
+        // computes it from the wrong origin and clips the content), so
+        // re-derive the frame from the rendered content once the SVG is in
+        // the document. 8px of padding covers markers, strokes and labels.
+        const box = rendered.getBBox();
+        if (!(box.width > 0 && box.height > 0)) {
+          throw new Error("empty diagram box");
+        }
+        const pad = 8;
+        const width = box.width + pad * 2;
+        const height = box.height + pad * 2;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
           // A broken label measurement produces enormous layouts (seen on
           // Windows Chromium with HTML labels); never show those.
           throw new Error(
-            `implausible layout: ${naturalWidth}x${naturalHeight}`,
+            `implausible layout: ${Math.round(width)}x${Math.round(height)}`,
           );
         }
-        if (naturalWidth > 0 && naturalHeight > 0) {
-          rendered.setAttribute("width", String(naturalWidth));
-          rendered.setAttribute("height", String(naturalHeight));
-          rendered.style.removeProperty("max-width");
-        }
+        rendered.setAttribute(
+          "viewBox",
+          `${box.x - pad} ${box.y - pad} ${width} ${height}`,
+        );
+        rendered.setAttribute("width", String(width));
+        rendered.setAttribute("height", String(height));
+        rendered.style.removeProperty("max-width");
         if (!rendered.querySelector("title")) {
           // Mermaid only names the SVG when the source has accTitle.
           rendered.setAttribute("role", "img");
           rendered.setAttribute("aria-label", labels.diagram);
         }
       }
-      diagram.canvas.replaceChildren(fragment);
       diagram.figure.dataset.mermaidState = "rendered";
       diagram.figure.dataset.mermaidTheme = theme;
       diagram.figure.removeAttribute("aria-busy");
@@ -245,6 +249,7 @@ export function createMermaidRenderer(options: {
       updateScrollable(diagram);
     } catch (reason) {
       if (pass !== diagram.pass) return;
+      diagram.canvas.replaceChildren();
       markError(diagram, reason);
     }
   };

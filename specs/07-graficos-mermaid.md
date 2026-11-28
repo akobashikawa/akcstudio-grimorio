@@ -122,7 +122,8 @@ Convenciones:
 - El `import("mermaid")` solo se ejecuta si `root` contiene `code.language-mermaid`.
 - La preview de `/admin/` usa las etiquetas en inglés con `useTranslations("en")`, porque `/admin/` es solo inglés.
 - Antes del primer render se espera a `document.fonts.ready` (y `document.fonts.load` de la fuente del diagrama): Mermaid mide las etiquetas de forma síncrona y el layout debe coincidir con la fuente mostrada.
-- Tras renderizar se comprueba el `viewBox`: si alguna dimensión supera **6 000 px**, el layout se considera roto (medición defectuosa del navegador): estado `error`, aviso con `role="status"`, fuente visible y `console.warn`; nunca se inserta el SVG gigante.
+- Tras insertar el SVG en el DOM se **re-deriva el encuadre desde el contenido**: se lee `getBBox()` del propio SVG y se fijan `viewBox`, `width` y `height` como `bbox ± 8 px`. No se confía en el `viewBox` que devuelve Mermaid (Chromium de Windows lo calcula desde un origen equivocado y recorta el contenido).
+- Si la caja de contenido supera **6 000 px** en alguna dimensión, el layout se considera roto (medición defectuosa del navegador): estado `error`, aviso con `role="status"`, fuente visible y `console.warn`; nunca se inserta el SVG gigante.
 
 ## Implementation plan
 
@@ -151,7 +152,8 @@ Convenciones:
 - [ ] A 375 px el artículo no genera scroll horizontal.
 - [ ] El flowchart ancho se muestra a escala 1:1 (`width` = ancho del `viewBox`) y su contenedor activa scroll horizontal en vez de encoger el texto.
 - [ ] Los flowcharts usan etiquetas de texto SVG: ningún `<svg>` de diagrama contiene `foreignObject`.
-- [ ] Un layout con `viewBox` mayor que 6 000 px se trata como error: aviso con `role="status"`, fuente visible y sin SVG insertado (test con motor falso).
+- [ ] Un layout con caja de contenido mayor que 6 000 px se trata como error: aviso con `role="status"`, fuente visible y sin SVG insertado (test con motor falso).
+- [ ] Tras renderizar, el `bbox` del contenido queda dentro del `viewBox` con ~8 px de margen en ambos ejes (invariante verificado en E2E, incluido un motor falso con `viewBox` desplazado a -93).
 - [ ] `writing-with-markdown` (EN/ES) documenta la sintaxis y su ejemplo se renderiza.
 - [ ] `README.md` documenta la sintaxis, la carga diferida, el tema, el fallback y el límite en feeds.
 - [ ] `pnpm format:check`, `pnpm check`, `pnpm build` y `pnpm test:e2e` pasan.
@@ -172,6 +174,7 @@ Convenciones:
 - **Sí:** `htmlLabels: false` global. En Chromium de Windows la medición de etiquetas HTML dentro de `foreignObject` produce layouts absurdos (16 500 × 16 528 px en producción) mientras los diagramas de secuencia (texto SVG) se ven bien; con etiquetas SVG el mismo contenido se renderiza correctamente y `<br/>` sigue funcionando. Verificado con las fuentes reales.
 - **Sí:** `fontFamily` como cadena simple sin comillas (`IBM Plex Sans Variable, system-ui, sans-serif`). Evita diferencias de serialización del stack CSS entre navegadores; la medición y la visualización usan la misma fuente.
 - **Sí:** guarda de 6 000 px tras el render. Un layout absurdo no debe aparecer nunca como un canvas gigante: se degrada a estado `error` con la fuente visible, igual que un error de sintaxis.
+- **Sí:** re-derivar el encuadre desde el `getBBox()` real tras insertar el SVG, con 8 px de padding. En Chromium de Windows Mermaid calcula un `viewBox` desplazado (origen -93 en producción) que dejaba 105 px vacíos a la izquierda y recortaba ~77 px del contenido por la derecha; medir el contenido ya insertado es independiente del navegador y normaliza el tamaño entre sistemas.
 - **Sí:** arreglar el fence de EN y migrar solo el diagrama seleccionado. Son los dos casos que el autor ya señaló; migrar todo el ASCII es trabajo editorial con riesgo de perder matices.
 - **No:** SVG en build. Añade un navegador headless al workflow Deploy y hace el build más lento y frágil por un beneficio marginal en un blog personal.
 - **No:** SVG o HTML renderizado en RSS/`llms.txt`. Muchos lectores ignoran SVG inline; el fence es una representación textual honesta del diagrama.
@@ -182,19 +185,20 @@ Convenciones:
 
 ## Risks
 
-| Risk                                                        | Mitigation                                                                                                                                                       |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| El chunk de Mermaid pesa ~1 MB sin comprimir                | Import diferido solo cuando hay diagramas; el `<pre>` sigue visible hasta que el SVG está listo, así que no hay hueco en blanco.                                 |
-| Mermaid comparte estado global entre renders                | Render secuencial en cola y `initialize()` antes de cada lote.                                                                                                   |
-| El usuario cambia de tema mientras un diagrama se renderiza | Contador por figura: solo se aplica el resultado de la última pasada.                                                                                            |
-| Sintaxis Mermaid inválida                                   | Estado `error`, fuente visible y aviso con `role="status"`; `console.warn` en lugar de `console.error` para no romper el test de consola.                        |
-| Dos diagramas generan ids repetidos                         | Contador monotónico `mermaid-diagram-N` por página/preview.                                                                                                      |
-| Un diagrama ancho rompe el layout móvil                     | `.mermaid-canvas` con `overflow-x: auto`: el diagrama se muestra a escala 1:1 y hace scroll dentro del contenedor; el test de layout ya comprueba `scrollWidth`. |
-| El fixture de `codeBlocks` deja de cuadrar                  | `tests/posts.ts` separa `diagrams` de `codeBlocks`; el test de `.copy-code` sigue usando solo bloques de código.                                                 |
-| El SVG inyectado escapa al saneado de la preview            | `securityLevel: "strict"` en Mermaid y SVG insertado con `createElement`, nunca con `v-html`.                                                                    |
-| Un error de render bloquea el resto de la página            | Cada figura captura su error; un diagrama roto no impide renderizar los demás.                                                                                   |
-| Un navegador mide mal las etiquetas HTML (Windows Chromium) | `htmlLabels: false` (texto SVG) y guarda de 6 000 px: el diagrama degrada a estado `error` con la fuente visible, nunca un canvas de 16 000 px.                  |
-| La fuente web carga después de la medición de Mermaid       | `document.fonts.ready` + `fonts.load` antes del primer render; medición y visualización usan la misma fuente.                                                    |
+| Risk                                                                              | Mitigation                                                                                                                                                       |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El chunk de Mermaid pesa ~1 MB sin comprimir                                      | Import diferido solo cuando hay diagramas; el `<pre>` sigue visible hasta que el SVG está listo, así que no hay hueco en blanco.                                 |
+| Mermaid comparte estado global entre renders                                      | Render secuencial en cola y `initialize()` antes de cada lote.                                                                                                   |
+| El usuario cambia de tema mientras un diagrama se renderiza                       | Contador por figura: solo se aplica el resultado de la última pasada.                                                                                            |
+| Sintaxis Mermaid inválida                                                         | Estado `error`, fuente visible y aviso con `role="status"`; `console.warn` en lugar de `console.error` para no romper el test de consola.                        |
+| Dos diagramas generan ids repetidos                                               | Contador monotónico `mermaid-diagram-N` por página/preview.                                                                                                      |
+| Un diagrama ancho rompe el layout móvil                                           | `.mermaid-canvas` con `overflow-x: auto`: el diagrama se muestra a escala 1:1 y hace scroll dentro del contenedor; el test de layout ya comprueba `scrollWidth`. |
+| El fixture de `codeBlocks` deja de cuadrar                                        | `tests/posts.ts` separa `diagrams` de `codeBlocks`; el test de `.copy-code` sigue usando solo bloques de código.                                                 |
+| El SVG inyectado escapa al saneado de la preview                                  | `securityLevel: "strict"` en Mermaid y SVG insertado con `createElement`, nunca con `v-html`.                                                                    |
+| Un error de render bloquea el resto de la página                                  | Cada figura captura su error; un diagrama roto no impide renderizar los demás.                                                                                   |
+| Un navegador mide mal las etiquetas HTML (Windows Chromium)                       | `htmlLabels: false` (texto SVG) y guarda de 6 000 px: el diagrama degrada a estado `error` con la fuente visible, nunca un canvas de 16 000 px.                  |
+| Mermaid calcula un `viewBox` desplazado y recorta el contenido (Windows Chromium) | El encuadre se re-deriva del `getBBox()` real tras insertar el SVG, con 8 px de padding; el `viewBox` de Mermaid no se usa.                                      |
+| La fuente web carga después de la medición de Mermaid                             | `document.fonts.ready` + `fonts.load` antes del primer render; medición y visualización usan la misma fuente.                                                    |
 
 ## What is **not** in this spec
 
