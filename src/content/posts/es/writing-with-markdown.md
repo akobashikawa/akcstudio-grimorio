@@ -62,6 +62,18 @@ function saludar(nombre) {
 console.log(saludar("mundo"));
 ```
 
+## Diagramas
+
+Un bloque cercado llamado `mermaid` se convierte en un diagrama real en lugar de código:
+
+```mermaid
+flowchart LR
+  Autor["Autor"] -->|"escribe"| Post["Post Markdown"]
+  Post --> Build["Build de Astro"] --> Site["Sitio estático"]
+```
+
+El diagrama se renderiza en el navegador, solo en las páginas que lo usan, y sigue el tema claro/oscuro. Mientras carga se ve el código fuente, que queda disponible detrás de **Ver código del diagrama**. Un diagrama con sintaxis inválida conserva su código y muestra un aviso en lugar de romper la página.
+
 ## Tablas
 
 Las tablas son útiles para comparar cosas de un vistazo:

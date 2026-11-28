@@ -54,25 +54,26 @@ La decisión: **mover la conversación con GitHub fuera del navegador**, a un se
 
 La arquitectura actual tiene tres piezas: una **GitHub App**, el **Worker** del sitio y una **sesión con KV**.
 
-```text
-Navegador (SPA Vue)                Worker (Astro + Cloudflare)         GitHub
-  │                                   │                                 │
-  │  GET /api/auth/login/             │                                 │
-  ├──────────────────────────────────>│  302 → authorize (client_id)    │
-  │                                   ├────────────────────────────────>│
-  │  (autoriza en github.com)         │                                 │
-  │  GET /api/auth/callback/?code=…   │                                 │
-  ├──────────────────────────────────>│  canje code → access+refresh    │
-  │                                   ├────────────────────────────────>│
-  │                                   │  guarda sesión en KV            │
-  │  302 + Set-Cookie: grimorio-admin (httpOnly)                            │
-  │<──────────────────────────────────┤                                 │
-  │  GET /api/auth/session/           │                                 │
-  ├──────────────────────────────────>│  lee KV, renueva si hace falta  │
-  │  { token (8h), login, expiresAt } │                                 │
-  │<──────────────────────────────────┤                                 │
-  │  fetch api.github.com con token   │                                 │
-  ├────────────────────────────────────────────────────────────────────>│
+```mermaid
+sequenceDiagram
+  autonumber
+  accTitle: Autenticación de /admin/ con la GitHub App
+  accDescr: Login redirigido a la GitHub App, callback con canje de código en el Worker, sesión guardada en KV y access token de 8 horas para hablar con la API de GitHub.
+  actor N as Navegador (SPA Vue)
+  participant W as Worker (Astro + Cloudflare)
+  participant G as GitHub
+
+  N->>W: GET /api/auth/login/
+  W-->>N: 302 → authorize (client_id)
+  N->>G: autoriza la GitHub App
+  N->>W: GET /api/auth/callback/?code=…
+  W->>G: canjea code → access + refresh
+  W->>W: guarda sesión en KV
+  W-->>N: 302 + Set-Cookie: grimorio-admin (httpOnly)
+  N->>W: GET /api/auth/session/
+  W->>W: lee KV, renueva si hace falta
+  W-->>N: { token (8h), login, expiresAt }
+  N->>G: fetch api.github.com con el token
 ```
 
 Puntos clave del diseño:

@@ -62,6 +62,18 @@ function greet(name) {
 console.log(greet("world"));
 ```
 
+## Diagrams
+
+A fenced block named `mermaid` becomes a real diagram instead of code:
+
+```mermaid
+flowchart LR
+  Author["Author"] -->|"writes"| Post["Markdown post"]
+  Post --> Build["Astro build"] --> Site["Static site"]
+```
+
+The diagram is rendered in the browser, only on pages that need it, and it follows the light/dark theme. While it loads you see the plain source, which stays available behind **View diagram source**. A diagram with invalid syntax keeps its code and shows a notice instead of breaking the page.
+
 ## Tables
 
 Tables are handy for comparing things at a glance:
