@@ -1,11 +1,15 @@
 ---
 title: "Writing with Markdown"
 description: "A tour of every element you can use in a post: headings, emphasis, lists, code, tables, quotes, and images."
-date: 2026-01-20
-lang: en
-category: notes
-tags: ["Markdown", "Writing"]
+date: "2026-01-20"
+updated: "2026-11-28"
+lang: "en"
+category: "notes"
+tags:
+  - "Markdown"
+  - "Writing"
 featured: false
+draft: false
 ---
 
 This post is a living cheatsheet: it shows how each Markdown element looks in the template. Use it as a reference while you write, and delete it once you no longer need it.
@@ -67,9 +71,36 @@ console.log(greet("world"));
 A fenced block named `mermaid` becomes a real diagram instead of code:
 
 ```mermaid
-flowchart LR
-  Author["Author"] -->|"writes"| Post["Markdown post"]
-  Post --> Build["Astro build"] --> Site["Static site"]
+flowchart TD
+    A([Inicio]) --> B[contador = 0]
+    B --> C{contador < 5?}
+    C -- Sí --> D[Mostrar contador]
+    D --> E[contador = contador + 1]
+    E --> C
+    C -- No --> F([Fin])
+```
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant UI as Formulario (UI)
+    participant Auth as Servicio de autenticación
+    participant DB as Base de datos
+
+    Usuario->>UI: ingresa usuario y contraseña
+    UI->>Auth: POST /login { usuario, contraseña }
+    Auth->>DB: buscar usuario por nombre
+    DB-->>Auth: datos del usuario y hash
+    Auth->>Auth: verificar contraseña
+
+    alt credenciales válidas
+        Auth->>Auth: generar token JWT
+        Auth-->>UI: 200 OK { token }
+        UI-->>Usuario: acceso concedido
+    else credenciales inválidas
+        Auth-->>UI: 401 Unauthorized
+        UI-->>Usuario: mostrar error de acceso
+    end
 ```
 
 The diagram is rendered in the browser, only on pages that need it, and it follows the light/dark theme. While it loads you see the plain source, which stays available behind **View diagram source**. A diagram with invalid syntax keeps its code and shows a notice instead of breaking the page.
