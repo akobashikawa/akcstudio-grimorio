@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
 import type { Language } from "../src/i18n";
 
 const postsDirectory = fileURLToPath(
@@ -28,34 +29,52 @@ export type PostFixture = {
   codeBlocks: number;
 };
 
-function frontmatter(source: string) {
+type Frontmatter = {
+  title?: unknown;
+  description?: unknown;
+  date?: unknown;
+  category?: unknown;
+  tags?: unknown;
+  featured?: unknown;
+  draft?: unknown;
+};
+
+// The `yaml` core schema keeps date-like scalars as strings, matching how
+// `astro:content` exposes them to the site code.
+function parseFrontmatter(source: string): {
+  data: Frontmatter;
+  body: string;
+} {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source);
   if (!match) throw new Error("Post is missing frontmatter");
-  return { data: match[1], body: source.slice(match[0].length) };
+  return {
+    data: (parse(match[1]) ?? {}) as Frontmatter,
+    body: source.slice(match[0].length),
+  };
 }
 
-function field(data: string, name: string) {
-  const value = new RegExp(`^${name}:\\s*(.+?)\\s*$`, "m").exec(data)?.[1];
-  return value?.replace(/^["']|["']$/g, "").trim() ?? "";
+function text(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function parsePost(lang: Language, file: string): PostFixture {
   const slug = file.replace(/\.md$/, "");
-  const { data, body } = frontmatter(
+  const { data, body } = parseFrontmatter(
     readFileSync(join(postsDirectory, lang, file), "utf8"),
   );
-  const tags = new RegExp(`^tags:\\s*\\[(.*?)\\]`, "m").exec(data)?.[1] ?? "";
   const fences = body.match(/^```\S*/gm) ?? [];
   const diagrams = fences.filter((fence) => fence === "```mermaid").length;
   return {
     slug,
-    title: field(data, "title"),
-    description: field(data, "description"),
-    date: field(data, "date"),
-    category: field(data, "category"),
-    tags: [...tags.matchAll(/["']([^"']*)["']/g)].map((match) => match[1]),
-    featured: field(data, "featured") === "true",
-    draft: field(data, "draft") === "true",
+    title: text(data.title),
+    description: text(data.description),
+    date: text(data.date),
+    category: text(data.category),
+    // Pages CMS writes tags as a block list; the schema also accepts inline
+    // arrays. Both arrive as a string[].
+    tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+    featured: data.featured === true,
+    draft: data.draft === true,
     headings: (body.match(/^## /gm) ?? []).length,
     diagrams,
     codeBlocks: fences.length / 2 - diagrams,
