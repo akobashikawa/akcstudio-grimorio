@@ -1,6 +1,6 @@
 # SPEC 07 — Diagramas Mermaid en los posts
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 01
 > **Date:** 2026-11-27
 > **Objective:** Renderizar los fences `mermaid` de los posts como diagramas SVG en el artículo y en la preview de `/admin/`, siguiendo el tema claro/oscuro y conservando el código fuente como fallback.
