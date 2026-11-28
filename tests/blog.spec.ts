@@ -10,6 +10,11 @@ const writingWithMarkdown = posts.find(
   (post) => post.slug === "writing-with-markdown",
 )!;
 const welcomePost = posts.find((post) => post.slug === "welcome")!;
+const cmsPost = posts.find(
+  (post) =>
+    post.slug ===
+    "como-desplegar-pagescms-selfhosted-gratis-vercel-neon-github",
+)!;
 // Fixed pages that the sitemap lists for each language: home, about, posts,
 // and projects. Post pages are added on top of these.
 const SITEMAP_PAGES_PER_LANGUAGE = 4;
@@ -173,6 +178,83 @@ test("Article contents, code blocks, and adjacent posts", async ({
   await expect(page).toHaveURL(new RegExp(`/posts/${adjacent.slug}/$`));
 });
 
+test("Mermaid diagrams render, toggle their source, and follow the theme", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(`/posts/${cmsPost.slug}/`);
+  await expect(
+    page.locator('figure[data-mermaid-state="rendered"]'),
+  ).toHaveCount(cmsPost.diagrams, { timeout: 15_000 });
+  // The fenced source stays hidden until the toggle reveals it.
+  const sources = page.locator("pre code.language-mermaid");
+  await expect(sources).toHaveCount(cmsPost.diagrams);
+  for (let i = 0; i < cmsPost.diagrams; i += 1) {
+    await expect(sources.nth(i)).toBeHidden();
+  }
+  const toggle = page.locator(".mermaid-source-toggle").first();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(page.locator("pre code.language-mermaid").first()).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await page
+    .getByRole("button", { name: t("article.diagramSourceHide") })
+    .click();
+  await expect(page.locator("pre code.language-mermaid").first()).toBeHidden();
+  // Diagrams get no copy button; plain code blocks keep theirs.
+  await expect(
+    page.locator("pre:has(code.language-mermaid) .copy-code"),
+  ).toHaveCount(0);
+  await expect(page.locator(".copy-code")).toHaveCount(cmsPost.codeBlocks);
+  // The corrected flowchart contains every edge again.
+  const svg = page
+    .locator('figure[data-mermaid-state="rendered"]')
+    .first()
+    .locator("svg");
+  for (const edge of ["1. HTTPS", "3. Read/encrypt tokens", "6. Push event"]) {
+    await expect(svg).toContainText(edge);
+  }
+  // Switching theme re-renders both diagrams.
+  await page.getByRole("button", { name: t("nav.dark") }).click();
+  await expect(page.locator('figure[data-mermaid-theme="dark"]')).toHaveCount(
+    cmsPost.diagrams,
+    { timeout: 15_000 },
+  );
+  await expect(
+    page.locator('figure[data-mermaid-state="rendered"] svg'),
+  ).toHaveCount(cmsPost.diagrams);
+  expect(errors).toEqual([]);
+});
+
+test("The admin sequence diagram exposes an accessible name", async ({
+  page,
+}) => {
+  await page.goto("/es/posts/como-construimos-admin-de-pat-a-github-app/");
+  const svg = page
+    .locator("#article-body figure[data-mermaid-state='rendered'] svg")
+    .first();
+  await expect(svg).toBeVisible();
+  await expect(svg.locator("title")).toHaveText(
+    "Autenticación de /admin/ con la GitHub App",
+  );
+});
+
+test("The Mermaid engine is not requested on pages without diagrams", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  // The dynamic import emits a ~5 KB facade chunk (the preload dep map) that
+  // loads everywhere; the diagram engine must stay page-gated.
+  const engine = /mermaid\.core|mermaid-parser|render-.*\.js/;
+  page.on("request", (request) => {
+    if (engine.test(request.url())) requests.push(request.url());
+  });
+  await page.goto("/posts/welcome/");
+  await page.goto("/about/");
+  expect(requests).toEqual([]);
+});
+
 test("Posts without an outline hide the table of contents", async ({
   page,
 }) => {
@@ -198,6 +280,7 @@ test("Page layouts, assets, and browser errors", async ({ page, isMobile }) => {
     "/projects/",
     "/about/",
     "/posts/writing-with-markdown/",
+    `/posts/${cmsPost.slug}/`,
   ]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
@@ -365,6 +448,12 @@ test("Reading all posts without JavaScript", async ({ browser, baseURL }) => {
     await expect(fallback.getByRole("link")).toHaveCount(posts.length);
     await fallback.getByRole("link").last().click();
     await expect(page.locator("#article-body")).toBeVisible();
+    // Mermaid diagrams keep their fenced source without JavaScript.
+    await page.goto(`/posts/${cmsPost.slug}/`);
+    await expect(
+      page.locator("pre code.language-mermaid").first(),
+    ).toBeVisible();
+    await expect(page.locator("figure.mermaid-diagram")).toHaveCount(0);
   } finally {
     await context.close();
   }

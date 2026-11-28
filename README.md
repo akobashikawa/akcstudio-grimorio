@@ -122,7 +122,18 @@ updated: 2026-10-01 # optional: last-reviewed date, used in the sitemap
 
 `pnpm check` (and therefore `pnpm build`) runs `pnpm check:posts`: `lang` must match the folder, and a published post without a translation produces a warning.
 
-The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work. For diagrams, drop an SVG in `public/` and reference it with a `<figure class="diagram">`.
+The body is standard Markdown: headings, tables, fenced code (with a copy button and syntax highlighting), blockquotes, and images all work.
+
+For diagrams, fence a block named `mermaid` (flowcharts, sequence diagrams, and more — see [Mermaid's docs](https://mermaid.js.org/intro/)):
+
+````md
+```mermaid
+flowchart LR
+  Author -->|writes| Post --> Build --> Site
+```
+````
+
+The diagram renders in the browser, only on pages that contain one, and it follows the light/dark theme. While it loads you see the plain source; after rendering it stays one click away behind **View diagram source**. A diagram with invalid syntax keeps its code and shows a notice instead of breaking the page. Feeds (`rss.xml`, `llms.txt`) keep the fenced source. Decorative images can still live in `public/` and be referenced with a `<figure class="diagram">`.
 
 ### Editing posts with Pages CMS
 
@@ -159,7 +170,7 @@ The admin authenticates through a GitHub App and a server session: no GitHub tok
 3. For local development, create a `.dev.vars` file at the root (already gitignored) with the same two variables; `astro dev` reads it through the Cloudflare Vite plugin.
 4. Open `/admin/` and press **Connect with GitHub**. The session lives in the Worker (KV binding `SESSION`) behind an `httpOnly` cookie and lasts 90 days; the browser only ever receives an 8-hour access token, kept in memory.
 
-The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, and show a preview. **New post** creates a single file in the language you choose: enter the title, description, body and metadata, use **Generate from title** if you want the slug derived automatically, and create the post as a draft. To translate a post, create the same slug in the other language. Every save and creation commits directly to `master` and triggers the normal deploy workflow.
+The editor can list English and Spanish posts (including drafts), edit frontmatter and the Markdown body, and show a preview. The preview renders `mermaid` fences the same way the public article does. **New post** creates a single file in the language you choose: enter the title, description, body and metadata, use **Generate from title** if you want the slug derived automatically, and create the post as a draft. To translate a post, create the same slug in the other language. Every save and creation commits directly to `master` and triggers the normal deploy workflow.
 
 **Delete post** removes a post from the trash icon in the list or from the editor. The first click shows the exact file path (`src/content/posts/{lang}/{slug}.md`); the second one commits `cms: delete posts/{lang}/{slug}.md`. Only the file you confirm is deleted — a translation of the same slug in the other language stays untouched, and the content lives on in the Git history if you change your mind. If the post is already gone, the admin reports it instead of failing.
 
@@ -173,7 +184,7 @@ Limitations:
 
 - There is no image upload. Reference files that already exist under `public/`.
 - Posts cannot be renamed, and the slug is fixed after creation. Use Pages CMS for that.
-- The preview is approximate and does not render Astro-specific components or directives.
+- The preview is approximate and does not render Astro-specific components or directives, but it does render `mermaid` fences like the public article.
 - The interface is English-only.
 - The 404 shortcut only appears in browsers where you signed in (a non-secret `grimorio.admin` flag; the session itself is what authorizes anything).
 - The browser holds no GitHub credential. If you suspect misuse, revoke the app authorization under Settings → Applications → Authorized GitHub Apps.

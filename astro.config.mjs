@@ -94,6 +94,16 @@ export default defineConfig({
   output: "static",
   trailingSlash: "always",
 
+  // Mermaid fences are rendered by the client-side helper in
+  // src/scripts/mermaid.ts, so Shiki must leave them as plain code.
+  // "math" is the pipeline default and must be kept.
+  markdown: {
+    syntaxHighlight: {
+      type: "shiki",
+      excludeLangs: ["math", "mermaid"],
+    },
+  },
+
   // The admin session for src/pages/api/auth/*. The Cloudflare adapter
   // provisions the "SESSION" KV binding automatically; the cookie holds
   // only a session id, so no secret reaches the browser.

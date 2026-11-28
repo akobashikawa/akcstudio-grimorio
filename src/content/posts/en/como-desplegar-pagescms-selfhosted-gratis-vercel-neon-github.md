@@ -69,8 +69,7 @@ end
 User -->|"1. HTTPS"| UI
 UI <--> Auth
 Auth <-->|"2. SQL Pooler (SSL)"| DB
-API <-->|"3. Read/encrypt tokens"|
-``` DB
+API <-->|"3. Read/encrypt tokens"| DB
 API -->|"4. GitHub REST API<br/>(Reads and creates commits)"| App
 App <-->|"5. Reads and writes files"| Repo
 App -.->|"6. Push event<br/>(/api/webhook/github)"| API

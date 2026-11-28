@@ -193,7 +193,7 @@ test("New post creates one file in the chosen language", async ({ page }) => {
   await page.getByLabel("Body", { exact: true }).fill("Cuerpo de prueba.");
 
   await page.getByRole("button", { name: "Create post" }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.locator(".admin-success")).toContainText(
     "Created posts/en/cancion-de-otono.md.",
   );
   await expect(
@@ -331,13 +331,13 @@ const WELCOME_MD = [
   "",
 ].join("\n");
 
-const fileResponse = () =>
+const fileResponse = (body: string = WELCOME_MD) =>
   jsonResponse({
     type: "file",
     name: "welcome.md",
     path: "src/content/posts/en/welcome.md",
     sha: "file-sha",
-    content: Buffer.from(WELCOME_MD, "utf8").toString("base64"),
+    content: Buffer.from(body, "utf8").toString("base64"),
     encoding: "base64",
   });
 
@@ -352,7 +352,7 @@ const welcomeListing = () =>
   ]);
 
 /** Stub session + listings so the list shows one post (en/welcome). */
-async function openListWithWelcomePost(page: Page) {
+async function openListWithWelcomePost(page: Page, fileBody = WELCOME_MD) {
   await page.addInitScript(() => {
     localStorage.setItem("grimorio.admin", "1");
   });
@@ -375,7 +375,7 @@ async function openListWithWelcomePost(page: Page) {
       return route.fulfill(jsonResponse([]));
     }
     if (url.pathname === WELCOME_PATH && request.method() === "GET") {
-      return route.fulfill(fileResponse());
+      return route.fulfill(fileResponse(fileBody));
     }
     if (url.pathname === WELCOME_PATH && request.method() === "DELETE") {
       deletes.push(
@@ -397,7 +397,7 @@ test("List deletes a post after confirmation", async ({ page }) => {
   await expect(page.getByText("src/content/posts/en/welcome.md")).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.locator(".admin-success")).toContainText(
     "Deleted posts/en/welcome.md.",
   );
   await expect(page).toHaveURL(/\/admin\/$/);
@@ -469,6 +469,53 @@ test("List treats a missing post as already deleted", async ({ page }) => {
   await expect(page.getByText("Welcome", { exact: true })).toBeHidden();
 });
 
+test("Editor preview renders Mermaid diagrams and reports invalid syntax", async ({
+  page,
+}) => {
+  const valid = [
+    "",
+    "```mermaid",
+    "flowchart LR",
+    "A[Start] --> B[End]",
+    "```",
+    "",
+  ].join("\n");
+  await openListWithWelcomePost(page, WELCOME_MD + valid);
+  await page
+    .getByRole("button", { name: /Welcome en\/welcome/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Preview" }).click();
+  const figure = page.locator(".admin-preview figure.mermaid-diagram");
+  await expect(figure).toHaveAttribute("data-mermaid-state", "rendered", {
+    timeout: 15_000,
+  });
+  await expect(figure.locator("svg")).toHaveCount(1);
+  await expect(figure.locator(".mermaid-source-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+
+  // Invalid syntax keeps the source and shows a status notice.
+  const invalid = '```mermaid\nflowchart LR\nA --> [|"unclosed\n```';
+  await page.getByRole("button", { name: "Write" }).click();
+  await page.getByLabel("Body", { exact: true }).fill(invalid);
+  await page.getByRole("button", { name: "Preview" }).click();
+  await expect(figure).toHaveAttribute("data-mermaid-state", "error", {
+    timeout: 15_000,
+  });
+  await expect(figure.locator(".mermaid-error")).toHaveText(
+    "This diagram could not be rendered.",
+  );
+  await expect(figure.locator(".mermaid-error")).toHaveAttribute(
+    "role",
+    "status",
+  );
+  await expect(
+    page.locator(".admin-preview pre code.language-mermaid"),
+  ).toBeVisible();
+});
+
 test("Editor deletes the post and returns to the list", async ({ page }) => {
   const { deletes } = await openListWithWelcomePost(page);
 
@@ -484,7 +531,7 @@ test("Editor deletes the post and returns to the list", async ({ page }) => {
   await expect(page.getByText("src/content/posts/en/welcome.md")).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.locator(".admin-success")).toContainText(
     "Deleted posts/en/welcome.md.",
   );
   await expect(
