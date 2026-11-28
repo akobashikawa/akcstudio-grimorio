@@ -29,6 +29,14 @@ type Diagram = {
   pass: number;
 };
 
+type PanState = {
+  pointerId: number;
+  x: number;
+  y: number;
+  left: number;
+  top: number;
+};
+
 const CODE_SELECTOR = "pre > code.language-mermaid";
 // Mermaid's own default is 50000; anything above this is a broken label
 // measurement, not a real diagram.
@@ -58,8 +66,31 @@ export function createMermaidRenderer(options: {
 }): MermaidRenderer {
   const { root, labels } = options;
   const diagrams = new Map<HTMLPreElement, Diagram>();
+  const canvases = new Map<HTMLElement, Diagram>();
   let lastTheme = themeName();
   let running: Promise<void> = Promise.resolve();
+
+  const updateScrollable = (diagram: Diagram): void => {
+    const { canvas } = diagram;
+    const scrollable =
+      canvas.scrollWidth > canvas.clientWidth ||
+      canvas.scrollHeight > canvas.clientHeight;
+    if (scrollable) {
+      canvas.dataset.scrollable = "true";
+      canvas.setAttribute("tabindex", "0");
+    } else {
+      delete canvas.dataset.scrollable;
+      canvas.removeAttribute("tabindex");
+    }
+  };
+
+  // Re-check on resizes: the overflow depends on the viewport width.
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const diagram = canvases.get(entry.target as HTMLElement);
+      if (diagram) updateScrollable(diagram);
+    }
+  });
 
   const createFigure = (pre: HTMLPreElement): Diagram => {
     diagramCounter += 1;
@@ -72,6 +103,42 @@ export function createMermaidRenderer(options: {
 
     const canvas = document.createElement("div");
     canvas.className = "mermaid-canvas";
+    canvas.setAttribute("role", "region");
+    canvas.setAttribute("aria-label", labels.diagram);
+
+    const pan: { state: PanState | null } = { state: null };
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || canvas.dataset.scrollable !== "true") return;
+      // Avoid text selection while dragging; touch-action still lets the
+      // browser handle vertical page gestures.
+      event.preventDefault();
+      pan.state = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        left: canvas.scrollLeft,
+        top: canvas.scrollTop,
+      };
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch {
+        /* The pointer may already be gone; the drag simply ends. */
+      }
+      canvas.classList.add("is-panning");
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (pan.state?.pointerId !== event.pointerId) return;
+      canvas.scrollLeft = pan.state.left - (event.clientX - pan.state.x);
+      canvas.scrollTop = pan.state.top - (event.clientY - pan.state.y);
+    });
+    const endPan = (event: PointerEvent) => {
+      if (pan.state?.pointerId !== event.pointerId) return;
+      pan.state = null;
+      canvas.classList.remove("is-panning");
+    };
+    canvas.addEventListener("pointerup", endPan);
+    canvas.addEventListener("pointercancel", endPan);
+    canvas.addEventListener("lostpointercapture", endPan);
 
     const button = document.createElement("button");
     button.type = "button";
@@ -89,7 +156,7 @@ export function createMermaidRenderer(options: {
     figure.append(canvas, button);
     pre.insertAdjacentElement("afterend", figure);
 
-    return {
+    const diagram: Diagram = {
       pre,
       figure,
       canvas,
@@ -98,6 +165,9 @@ export function createMermaidRenderer(options: {
       source: pre.querySelector("code")?.textContent ?? "",
       pass: 0,
     };
+    canvases.set(canvas, diagram);
+    resizeObserver.observe(canvas);
+    return diagram;
   };
 
   /** Adds figures for new fences and forgets pres removed from the DOM. */
@@ -172,6 +242,7 @@ export function createMermaidRenderer(options: {
       diagram.figure.dataset.mermaidTheme = theme;
       diagram.figure.removeAttribute("aria-busy");
       diagram.pre.hidden = true;
+      updateScrollable(diagram);
     } catch (reason) {
       if (pass !== diagram.pass) return;
       markError(diagram, reason);
@@ -226,6 +297,7 @@ export function createMermaidRenderer(options: {
     },
     destroy: () => {
       observer.disconnect();
+      resizeObserver.disconnect();
     },
   };
   return renderer;

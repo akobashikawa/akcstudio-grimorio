@@ -463,6 +463,15 @@ a.chip:hover {
 }
 .prose .mermaid-canvas {
   overflow-x: auto;
+  /* Horizontal drags pan the diagram; vertical gestures scroll the page. */
+  touch-action: pan-y;
+}
+.prose .mermaid-canvas[data-scrollable="true"] {
+  cursor: grab;
+}
+.prose .mermaid-canvas.is-panning {
+  cursor: grabbing;
+  user-select: none;
 }
 .prose .mermaid-canvas svg {
   display: block;
