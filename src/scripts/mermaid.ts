@@ -118,11 +118,20 @@ export function createMermaidRenderer(options: {
       // Mermaid sanitizes its output under securityLevel: "strict"; the SVG
       // enters the DOM through a range fragment, never through v-html.
       const fragment = document.createRange().createContextualFragment(svg);
-      const rendered = fragment.querySelector("svg");
-      if (rendered && !rendered.querySelector("title")) {
-        // Mermaid only names the SVG when the source has accTitle.
-        rendered.setAttribute("role", "img");
-        rendered.setAttribute("aria-label", labels.diagram);
+      const rendered = fragment.querySelector("svg") as SVGSVGElement | null;
+      if (rendered) {
+        // Render at natural size: a wide diagram scrolls inside the canvas
+        // instead of shrinking its text to an illegible scale.
+        const natural = rendered.viewBox.baseVal.width;
+        if (Number.isFinite(natural) && natural > 0) {
+          rendered.setAttribute("width", String(natural));
+          rendered.style.removeProperty("max-width");
+        }
+        if (!rendered.querySelector("title")) {
+          // Mermaid only names the SVG when the source has accTitle.
+          rendered.setAttribute("role", "img");
+          rendered.setAttribute("aria-label", labels.diagram);
+        }
       }
       diagram.canvas.replaceChildren(fragment);
       diagram.figure.dataset.mermaidState = "rendered";
