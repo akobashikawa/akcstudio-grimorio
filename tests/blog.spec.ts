@@ -207,6 +207,11 @@ test("Mermaid diagrams render, toggle their source, and follow the theme", async
     page.locator("pre:has(code.language-mermaid) .copy-code"),
   ).toHaveCount(0);
   await expect(page.locator(".copy-code")).toHaveCount(cmsPost.codeBlocks);
+  // Labels are SVG text: Mermaid's HTML-in-foreignObject measurement
+  // produces huge broken layouts on Windows Chromium.
+  await expect(
+    page.locator("figure .mermaid-canvas foreignObject"),
+  ).toHaveCount(0);
   // Diagrams render at natural size: the wide flowchart scrolls inside its
   // canvas at 1:1 scale instead of shrinking its text.
   const canvas = page.locator(".mermaid-canvas").first();
@@ -257,6 +262,44 @@ test("The admin sequence diagram exposes an accessible name", async ({
     "Autenticación de /admin/ con la GitHub App",
     { timeout: 15_000 },
   );
+});
+
+test("An implausible Mermaid layout falls back to the source", async ({
+  page,
+}) => {
+  // Simulate a browser whose label measurement breaks (Windows Chromium):
+  // the fake engine always returns a 20000x20000 layout.
+  await page.route("**/mermaid.core.*.js", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: [
+        "export default {",
+        "  initialize() {},",
+        "  render: async () => ({",
+        '    svg: \'<svg viewBox="0 0 20000 20000" width="20000" height="20000"><text x="10" y="30">huge</text></svg>\',',
+        "    bindFunctions: () => {},",
+        "  }),",
+        "};",
+      ].join("\n"),
+    }),
+  );
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(`/posts/${cmsPost.slug}/`);
+  await expect(page.locator('figure[data-mermaid-state="error"]')).toHaveCount(
+    cmsPost.diagrams,
+    { timeout: 15_000 },
+  );
+  await expect(page.locator(".mermaid-error")).toHaveCount(cmsPost.diagrams);
+  await expect(page.locator(".mermaid-error").first()).toHaveAttribute(
+    "role",
+    "status",
+  );
+  // No giant canvas is inserted and the fenced source stays visible.
+  await expect(page.locator(".mermaid-canvas svg")).toHaveCount(0);
+  await expect(page.locator("pre code.language-mermaid").first()).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("The Mermaid engine is not requested on pages without diagrams", async ({

@@ -30,6 +30,11 @@ type Diagram = {
 };
 
 const CODE_SELECTOR = "pre > code.language-mermaid";
+// Mermaid's own default is 50000; anything above this is a broken label
+// measurement, not a real diagram.
+const MAX_DIMENSION = 6000;
+// Quote-free so it survives any font-family attribute serialization.
+const FONT_FAMILY = "IBM Plex Sans Variable, system-ui, sans-serif";
 const isDark = (): boolean =>
   document.documentElement.classList.contains("dark");
 const themeName = (): Theme => (isDark() ? "dark" : "light");
@@ -106,6 +111,21 @@ export function createMermaidRenderer(options: {
     }
   };
 
+  const markError = (diagram: Diagram, reason: unknown): void => {
+    diagram.figure.dataset.mermaidState = "error";
+    delete diagram.figure.dataset.mermaidTheme;
+    diagram.figure.removeAttribute("aria-busy");
+    diagram.pre.hidden = false;
+    if (!diagram.errorMessage) {
+      diagram.errorMessage = document.createElement("p");
+      diagram.errorMessage.className = "mermaid-error";
+      diagram.errorMessage.setAttribute("role", "status");
+      diagram.canvas.before(diagram.errorMessage);
+    }
+    diagram.errorMessage.textContent = labels.error;
+    console.warn("Mermaid diagram could not be rendered:", reason);
+  };
+
   const renderDiagram = async (diagram: Diagram, theme: Theme) => {
     const pass = diagram.pass + 1;
     diagram.pass = pass;
@@ -118,13 +138,27 @@ export function createMermaidRenderer(options: {
       // Mermaid sanitizes its output under securityLevel: "strict"; the SVG
       // enters the DOM through a range fragment, never through v-html.
       const fragment = document.createRange().createContextualFragment(svg);
-      const rendered = fragment.querySelector("svg") as SVGSVGElement | null;
+      const rendered = fragment.querySelector("svg");
       if (rendered) {
         // Render at natural size: a wide diagram scrolls inside the canvas
-        // instead of shrinking its text to an illegible scale.
-        const natural = rendered.viewBox.baseVal.width;
-        if (Number.isFinite(natural) && natural > 0) {
-          rendered.setAttribute("width", String(natural));
+        // instead of shrinking its text to an illegible scale. Read the
+        // viewBox from the attribute: some browsers fail on baseVal of a
+        // detached SVG.
+        const [, , naturalWidth, naturalHeight] = (
+          rendered.getAttribute("viewBox") ?? ""
+        )
+          .split(/\s+/)
+          .map(Number);
+        if (naturalWidth > MAX_DIMENSION || naturalHeight > MAX_DIMENSION) {
+          // A broken label measurement produces enormous layouts (seen on
+          // Windows Chromium with HTML labels); never show those.
+          throw new Error(
+            `implausible layout: ${naturalWidth}x${naturalHeight}`,
+          );
+        }
+        if (naturalWidth > 0 && naturalHeight > 0) {
+          rendered.setAttribute("width", String(naturalWidth));
+          rendered.setAttribute("height", String(naturalHeight));
           rendered.style.removeProperty("max-width");
         }
         if (!rendered.querySelector("title")) {
@@ -140,33 +174,28 @@ export function createMermaidRenderer(options: {
       diagram.pre.hidden = true;
     } catch (reason) {
       if (pass !== diagram.pass) return;
-      diagram.figure.dataset.mermaidState = "error";
-      delete diagram.figure.dataset.mermaidTheme;
-      diagram.figure.removeAttribute("aria-busy");
-      diagram.pre.hidden = false;
-      if (!diagram.errorMessage) {
-        diagram.errorMessage = document.createElement("p");
-        diagram.errorMessage.className = "mermaid-error";
-        diagram.errorMessage.setAttribute("role", "status");
-        diagram.canvas.before(diagram.errorMessage);
-      }
-      diagram.errorMessage.textContent = labels.error;
-      console.warn("Mermaid diagram could not be rendered:", reason);
+      markError(diagram, reason);
     }
   };
 
   const runPass = async (): Promise<void> => {
     collect();
     if (diagrams.size === 0) return;
+    // Mermaid measures labels synchronously; wait for the web fonts so the
+    // layout matches the font the diagram is displayed with.
+    await Promise.all([
+      document.fonts.ready,
+      document.fonts.load(`16px ${FONT_FAMILY}`).catch(() => {}),
+    ]);
     const mermaid = await loadMermaid();
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
+      // HTML labels are measured inside foreignObject and misbehave on
+      // Windows Chromium (huge layouts); SVG text is stable everywhere.
+      htmlLabels: false,
       theme: isDark() ? "dark" : "default",
-      fontFamily:
-        getComputedStyle(document.documentElement)
-          .getPropertyValue("--font-body")
-          .trim() || undefined,
+      fontFamily: FONT_FAMILY,
     });
     const theme = themeName();
     for (const diagram of diagrams.values()) {
