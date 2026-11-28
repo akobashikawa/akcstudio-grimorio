@@ -247,6 +247,8 @@ const older = posts[index + 1];
     document.querySelectorAll<HTMLPreElement>(".prose pre").forEach((pre) => {
       const code = pre.querySelector("code");
       if (!code) return;
+      // Mermaid fences get a "view source" toggle of their own.
+      if (code.classList.contains("language-mermaid")) return;
       const button = document.createElement("button");
       button.className = "copy-code";
       button.textContent = t("article.copy");
