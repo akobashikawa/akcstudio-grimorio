@@ -302,6 +302,95 @@ test("An implausible Mermaid layout falls back to the source", async ({
   expect(errors).toEqual([]);
 });
 
+test("Diagram canvases pan by dragging", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(`/posts/${cmsPost.slug}/`);
+  await expect(
+    page.locator('figure[data-mermaid-state="rendered"]'),
+  ).toHaveCount(cmsPost.diagrams, { timeout: 15_000 });
+  const canvases = page.locator(".mermaid-canvas");
+  for (let i = 0; i < cmsPost.diagrams; i += 1) {
+    await expect(canvases.nth(i)).toHaveAttribute("data-scrollable", "true");
+    await expect(canvases.nth(i)).toHaveAttribute("tabindex", "0");
+  }
+  await expect(canvases.first()).toHaveAttribute("role", "region");
+  await expect(canvases.first()).toHaveAttribute(
+    "aria-label",
+    t("article.diagramLabel"),
+  );
+  await expect(canvases.first()).toHaveCSS("touch-action", "pan-y");
+  await expect(canvases.first()).toHaveCSS("cursor", "grab");
+
+  const canvas = canvases.first();
+  await canvas.scrollIntoViewIfNeeded();
+  const box = (await canvas.boundingBox())!;
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  await page.mouse.move(centerX, centerY);
+  await page.mouse.down();
+  await expect(canvas).toHaveClass(/is-panning/);
+  await expect(canvas).toHaveCSS("cursor", "grabbing");
+  await page.mouse.move(centerX - 300, centerY, { steps: 8 });
+  await page.mouse.up();
+  await expect(canvas).not.toHaveClass(/is-panning/);
+  const scroll = await canvas.evaluate((node) => ({
+    left: node.scrollLeft,
+    max: node.scrollWidth - node.clientWidth,
+  }));
+  expect(scroll.left).toBeGreaterThan(0);
+  expect(scroll.left).toBeLessThanOrEqual(scroll.max);
+  // The pan does not interfere with the source toggle.
+  await expect(page.locator("pre code.language-mermaid").first()).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("Diagrams that fit do not pan; scrollable ones respond to keys", async ({
+  page,
+}) => {
+  await page.goto("/posts/writing-with-markdown/");
+  await expect(
+    page.locator('figure[data-mermaid-state="rendered"]'),
+  ).toHaveCount(writingWithMarkdown.diagrams, { timeout: 15_000 });
+  const flowchart = page.locator(".mermaid-canvas").first();
+  // Affordances match the actual overflow: on mobile the counter flowchart
+  // overflows, on desktop it fits the column.
+  const flowchartScrollable = await flowchart.evaluate(
+    (node) => node.scrollWidth > node.clientWidth,
+  );
+  if (flowchartScrollable) {
+    await expect(flowchart).toHaveAttribute("data-scrollable", "true");
+    await expect(flowchart).toHaveAttribute("tabindex", "0");
+  } else {
+    await expect(flowchart).not.toHaveAttribute("data-scrollable");
+    await expect(flowchart).not.toHaveAttribute("tabindex");
+  }
+  await flowchart.scrollIntoViewIfNeeded();
+  const box = (await flowchart.boundingBox())!;
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  await page.mouse.move(centerX, centerY);
+  await page.mouse.down();
+  await page.mouse.move(centerX - 200, centerY, { steps: 4 });
+  await page.mouse.up();
+  const dragged = await flowchart.evaluate((node) => node.scrollLeft);
+  if (flowchartScrollable) {
+    expect(dragged).toBeGreaterThan(0);
+  } else {
+    expect(dragged).toBe(0);
+  }
+
+  // The sequence diagram overflows: focus + arrow keys scroll it.
+  const sequence = page.locator(".mermaid-canvas").nth(1);
+  await expect(sequence).toHaveAttribute("data-scrollable", "true");
+  await sequence.scrollIntoViewIfNeeded();
+  await sequence.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() => sequence.evaluate((node) => node.scrollLeft))
+    .toBeGreaterThan(0);
+});
+
 test("The Mermaid engine is not requested on pages without diagrams", async ({
   page,
 }) => {

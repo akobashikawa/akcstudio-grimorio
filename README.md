@@ -133,7 +133,7 @@ flowchart LR
 ```
 ````
 
-The diagram renders in the browser, only on pages that contain one, and it follows the light/dark theme. While it loads you see the plain source; after rendering it stays one click away behind **View diagram source**. A diagram with invalid syntax keeps its code and shows a notice instead of breaking the page. Feeds (`rss.xml`, `llms.txt`) keep the fenced source. Decorative images can still live in `public/` and be referenced with a `<figure class="diagram">`.
+The diagram renders in the browser, only on pages that contain one, and it follows the light/dark theme. While it loads you see the plain source; after rendering it stays one click away behind **View diagram source**. Wide diagrams scroll inside their own box: drag them to pan, or focus one and use the arrow keys. A diagram with invalid syntax keeps its code and shows a notice instead of breaking the page. Feeds (`rss.xml`, `llms.txt`) keep the fenced source. Decorative images can still live in `public/` and be referenced with a `<figure class="diagram">`.
 
 ### Editing posts with Pages CMS
 

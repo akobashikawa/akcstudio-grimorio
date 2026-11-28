@@ -1,6 +1,6 @@
 # SPEC 08 — Pan por arrastre en diagramas
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 07
 > **Date:** 2026-11-28
 > **Objective:** Permitir desplazar con el puntero (ratón, lápiz o táctil) los diagramas que desbordan su contenedor, sin sustituir la scrollbar ni el teclado.
